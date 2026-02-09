@@ -267,6 +267,39 @@ export function addWorkoutSet(
   return id;
 }
 
+export function deleteProgram(programId: string) {
+  // Soft-delete the program
+  programs$[programId].deleted.set(true);
+
+  // Soft-delete associated weeks, days, and sets
+  const weeks = programWeeks$.get();
+  if (weeks) {
+    for (const week of Object.values(weeks) as any[]) {
+      if (week && week.program_id === programId && !week.deleted) {
+        programWeeks$[week.id].deleted.set(true);
+
+        const days = workoutDays$.get();
+        if (days) {
+          for (const day of Object.values(days) as any[]) {
+            if (day && day.program_week_id === week.id && !day.deleted) {
+              workoutDays$[day.id].deleted.set(true);
+
+              const sets = workoutSets$.get();
+              if (sets) {
+                for (const set of Object.values(sets) as any[]) {
+                  if (set && set.workout_day_id === day.id && !set.deleted) {
+                    workoutSets$[set.id].deleted.set(true);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 export function addWorkoutSession(workoutDayId: string) {
   const id = generateId();
   workoutSessions$[id].assign({
