@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { Alert } from "react-native";
 import { Session } from "@supabase/supabase-js";
 import {
   supabase,
@@ -32,22 +33,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const loadSession = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      if (session?.user) {
+        authUserId$.set(session.user.id);
+        enableAllSync();
+      }
+    } catch (error) {
+      console.error("Failed to get session:", error);
+      Alert.alert(
+        "Connection Error",
+        "Could not restore your session. The app will continue in offline mode.",
+        [{ text: "Retry", onPress: () => loadSession() }, { text: "Continue Offline" }],
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
-        setSession(session);
-        if (session?.user) {
-          authUserId$.set(session.user.id);
-          enableAllSync();
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to get session:", error);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    loadSession();
 
     const {
       data: { subscription },
@@ -59,6 +67,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await migrateLocalDataToSupabase(session.user.id);
         } catch (error) {
           console.error("Failed to migrate local data:", error);
+          Alert.alert(
+            "Migration Error",
+            "Some local data could not be synced to your account. Your local data is safe — it will sync the next time you sign in.",
+          );
         }
         enableAllSync();
       } else {
@@ -68,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [loadSession]);
 
   const signUp = async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({ email, password });
