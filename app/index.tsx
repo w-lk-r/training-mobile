@@ -1,145 +1,115 @@
-import { useState } from 'react';
-import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-} from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { observer } from '@legendapp/state/react';
-import { addTodo, todos$ as _todos$, toggleDone } from '../utils/supabase';
-import { Tables } from '../utils/database.types';
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { Link } from "expo-router";
+import { useAuth } from "../contexts/auth-context";
 
-// Emojis to decorate each todo.
-const NOT_DONE_ICON = String.fromCodePoint(0x1f7e0);
-const DONE_ICON = String.fromCodePoint(0x2705);
+export default function Index() {
+  const { session, isLoading, signOut } = useAuth();
 
-// The text input component to add a new todo.
-const NewTodo = () => {
-  const [text, setText] = useState('');
-  const handleSubmitEditing = ({ nativeEvent: { text } }: { nativeEvent: { text: string } }) => {
-    setText('');
-    addTodo(text);
-  };
-  return (
-    <TextInput
-      value={text}
-      onChangeText={(text) => setText(text)}
-      onSubmitEditing={handleSubmitEditing}
-      placeholder="What do you want to do today?"
-      style={styles.input}
-    />
-  );
-};
-
-// A single todo component, either 'not done' or 'done': press to toggle.
-const Todo = ({ todo }: { todo: Tables<'todos'> }) => {
-  const handlePress = () => {
-    toggleDone(todo.id);
-  };
-  return (
-    <TouchableOpacity
-      key={todo.id}
-      onPress={handlePress}
-      style={[styles.todo, todo.done ? styles.done : null]}
-    >
-      <Text style={styles.todoText}>
-        {todo.done ? DONE_ICON : NOT_DONE_ICON} {todo.text}
-      </Text>
-    </TouchableOpacity>
-  );
-};
-
-// A list component to show all the todos.
-const Todos = observer(({ todos$ }: { todos$: typeof _todos$ }) => {
-  // Get the todos from the state and subscribe to updates
-  const todos = todos$.get();
-  const renderItem = ({ item: todo }: { item: Tables<'todos'> }) => (
-    <Todo todo={todo} />
-  );
-  if (todos)
+  if (isLoading) {
     return (
-      <FlatList
-        data={Object.values(todos)}
-        renderItem={renderItem}
-        style={styles.todos}
-      />
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.container}>
+          <Text style={styles.heading}>Loading...</Text>
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
+  }
 
-  return <></>;
-});
-
-// A button component to delete all the todos, only shows when there are some.
-const ClearTodos = () => {
-  const handlePress = () => {
-    console.log('delete');
-  };
-  return [].length ? (
-    <TouchableOpacity onPress={handlePress}>
-      <Text style={styles.clearTodos}>Clear all</Text>
-    </TouchableOpacity>
-  ) : null;
-};
-
-// The main app.
-const Index = () => {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        <Text style={styles.heading}>Legend-State Example</Text>
-        <NewTodo />
-        <Todos todos$={_todos$} />
-        <ClearTodos />
+        <Text style={styles.heading}>Training</Text>
+
+        <View style={styles.content}>
+          <Text style={styles.statusText}>
+            {session
+              ? `Signed in as ${session.user.email}`
+              : "Working offline (local data only)"}
+          </Text>
+
+          <Text style={styles.placeholder}>
+            Program and workout features coming in Phase 2
+          </Text>
+        </View>
+
+        <View style={styles.footer}>
+          {session ? (
+            <TouchableOpacity style={styles.button} onPress={signOut}>
+              <Text style={styles.buttonText}>Sign Out</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.authLinks}>
+              <Link href="/(auth)/login" asChild>
+                <TouchableOpacity style={styles.button}>
+                  <Text style={styles.buttonText}>Sign In</Text>
+                </TouchableOpacity>
+              </Link>
+              <Link href="/(auth)/signup" asChild>
+                <TouchableOpacity style={[styles.button, styles.buttonOutline]}>
+                  <Text style={[styles.buttonText, styles.buttonOutlineText]}>
+                    Create Account
+                  </Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
+          )}
+        </View>
       </SafeAreaView>
     </SafeAreaProvider>
   );
-};
+}
 
-// Styles for the app.
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
     flex: 1,
-    margin: 16,
+    backgroundColor: "#fff",
+    padding: 24,
   },
   heading: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  input: {
-    borderColor: '#999',
-    borderRadius: 8,
-    borderWidth: 2,
-    flex: 0,
-    height: 64,
+    fontSize: 28,
+    fontWeight: "bold",
+    textAlign: "center",
     marginTop: 16,
-    padding: 16,
-    fontSize: 20,
   },
-  todos: {
+  content: {
     flex: 1,
-    marginTop: 16,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  todo: {
-    borderRadius: 8,
-    marginBottom: 16,
-    padding: 16,
-    backgroundColor: '#ffd',
+  statusText: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 24,
   },
-  done: {
-    backgroundColor: '#dfd',
-  },
-  todoText: {
-    fontSize: 20,
-  },
-  clearTodos: {
-    margin: 16,
-    flex: 0,
-    textAlign: 'center',
+  placeholder: {
     fontSize: 16,
+    color: "#999",
+    textAlign: "center",
+  },
+  footer: {
+    paddingBottom: 16,
+  },
+  authLinks: {
+    gap: 12,
+  },
+  button: {
+    backgroundColor: "#333",
+    borderRadius: 8,
+    padding: 16,
+    alignItems: "center",
+  },
+  buttonOutline: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  buttonOutlineText: {
+    color: "#333",
   },
 });
-
-export default Index;
