@@ -12,6 +12,7 @@ import {
   addProgramWeek,
   addWorkoutDay,
   addWorkoutSet,
+  deleteProgram,
   exercises$,
 } from "../utils/supabase";
 
@@ -92,48 +93,58 @@ export function generateProgram(
 ): string {
   const programId = addProgram("4-Week Strength Program");
 
-  for (let week = 1; week <= 4; week++) {
-    const weekId = addProgramWeek(programId, week);
-    const mainLiftScheme = WEEKLY_MAIN_LIFT_SCHEME[week - 1];
+  try {
+    for (let week = 1; week <= 4; week++) {
+      const weekId = addProgramWeek(programId, week);
+      const mainLiftScheme = WEEKLY_MAIN_LIFT_SCHEME[week - 1];
 
-    DAY_CONFIGS.forEach((day, dayIdx) => {
-      const dayId = addWorkoutDay(weekId, dayIdx + 1, day.name);
-      const mainExerciseId = exerciseIds[day.mainLift];
+      DAY_CONFIGS.forEach((day, dayIdx) => {
+        const dayId = addWorkoutDay(weekId, dayIdx + 1, day.name);
+        const mainExerciseId = exerciseIds[day.mainLift];
 
-      // Main lift sets for this week
-      mainLiftScheme.forEach((set, setIdx) => {
-        addWorkoutSet(
-          dayId,
-          mainExerciseId,
-          setIdx + 1,
-          set.reps,
-          set.percentage,
-          set.rpe ?? null,
-        );
-      });
-
-      // Accessory sets (consistent across weeks)
-      let setCounter = mainLiftScheme.length + 1;
-      day.accessories.forEach((accName) => {
-        const accId = exerciseIds[accName];
-        ACCESSORY_SCHEME.forEach((set) => {
+        // Main lift sets for this week
+        mainLiftScheme.forEach((set, setIdx) => {
           addWorkoutSet(
             dayId,
-            accId,
-            setCounter,
+            mainExerciseId,
+            setIdx + 1,
             set.reps,
-            null, // accessories use absolute weight, not percentage
-            null,
+            set.percentage,
+            set.rpe ?? null,
           );
-          setCounter++;
+        });
+
+        // Accessory sets (consistent across weeks)
+        let setCounter = mainLiftScheme.length + 1;
+        day.accessories.forEach((accName) => {
+          const accId = exerciseIds[accName];
+          ACCESSORY_SCHEME.forEach((set) => {
+            addWorkoutSet(
+              dayId,
+              accId,
+              setCounter,
+              set.reps,
+              null, // accessories use absolute weight, not percentage
+              null,
+            );
+            setCounter++;
+          });
         });
       });
-    });
-  }
+    }
 
-  // Record max lifts
-  for (const [exerciseId, weight] of Object.entries(maxLifts)) {
-    addMaxLift(exerciseId, weight);
+    // Record max lifts
+    for (const [exerciseId, weight] of Object.entries(maxLifts)) {
+      addMaxLift(exerciseId, weight);
+    }
+  } catch (error) {
+    // Roll back the partially created program to avoid inconsistent state
+    try {
+      deleteProgram(programId);
+    } catch (cleanupError) {
+      console.error("Failed to clean up partial program:", cleanupError);
+    }
+    throw error;
   }
 
   return programId;

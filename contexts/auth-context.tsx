@@ -33,14 +33,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        authUserId$.set(session.user.id);
-        enableAllSync();
-      }
-      setIsLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        if (session?.user) {
+          authUserId$.set(session.user.id);
+          enableAllSync();
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to get session:", error);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
 
     const {
       data: { subscription },
@@ -48,7 +55,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
 
       if (session?.user) {
-        migrateLocalDataToSupabase(session.user.id);
+        try {
+          await migrateLocalDataToSupabase(session.user.id);
+        } catch (error) {
+          console.error("Failed to migrate local data:", error);
+        }
         enableAllSync();
       } else {
         authUserId$.set("local");
