@@ -87,11 +87,25 @@ const DAY_CONFIGS: DayConfig[] = [
  * @param exerciseIds - Map of exercise name to ID (from seedDefaultExercises)
  * @returns The program ID
  */
+const PROGRAM_TYPE_NAMES: Record<string, string> = {
+  powerlifting: "4-Week Strength Program",
+  olympic_weightlifting: "Olympic Weightlifting Program",
+  crossfit: "CrossFit Program",
+  zone2_cardio: "Zone 2 Cardio Program",
+};
+
 export function generateProgram(
   maxLifts: MaxLiftMap,
   exerciseIds: ExerciseIdMap,
+  programType?: string,
 ): string {
-  const programId = addProgram("4-Week Strength Program");
+  const type = programType ?? "powerlifting";
+  const programId = addProgram(
+    PROGRAM_TYPE_NAMES[type] ?? "Training Program",
+    undefined,
+    4,
+    type,
+  );
 
   try {
     for (let week = 1; week <= 4; week++) {
@@ -159,6 +173,7 @@ export function generateProgram(
  */
 export function createProgramFromMaxes(
   maxes: Record<MainLiftCategory, number>,
+  programType?: string,
 ): string {
   const exerciseIds = seedDefaultExercises();
 
@@ -177,5 +192,5 @@ export function createProgramFromMaxes(
     maxLifts[exerciseId] = weight;
   }
 
-  return generateProgram(maxLifts, exerciseIds);
+  return generateProgram(maxLifts, exerciseIds, programType);
 }

@@ -5,6 +5,8 @@ import {
   programWeeks$,
   workoutDays$,
   workoutSets$,
+  workoutTemplates$,
+  templateItems$,
 } from "../utils/supabase";
 import type { Tables } from "../utils/database.types";
 
@@ -114,6 +116,150 @@ export function useWorkoutDayExercises(
     const order: string[] = [];
 
     daySets
+      .sort((a, b) => a.set_number - b.set_number)
+      .forEach((set) => {
+        if (!groups[set.exercise_id]) {
+          groups[set.exercise_id] = {
+            exerciseId: set.exercise_id,
+            exerciseName: exData?.[set.exercise_id]?.name ?? "Unknown",
+            sets: [],
+          };
+          order.push(set.exercise_id);
+        }
+        groups[set.exercise_id].sets.push(set);
+      });
+
+    return order.map((id) => groups[id]);
+  });
+}
+
+/** Returns all non-deleted programs, newest first */
+export function useAllPrograms(): Tables<"programs">[] {
+  return useSelector(() => {
+    const data = programs$.get();
+    if (!data) return [];
+    return (
+      Object.values(data)
+        .filter((p: any) => p && !p.deleted) as Tables<"programs">[]
+    ).sort(
+      (a, b) =>
+        new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime(),
+    );
+  });
+}
+
+/** Returns all workout days across all current weeks of all programs */
+export function useAllCurrentWorkoutDays(): (Tables<"workout_days"> & {
+  programName: string;
+  programId: string;
+  weekNumber: number;
+})[] {
+  return useSelector(() => {
+    const progs = programs$.get();
+    const weeks = programWeeks$.get();
+    const days = workoutDays$.get();
+    if (!progs || !weeks || !days) return [];
+
+    // Build a map of current week IDs per program
+    const currentWeekIds: Record<string, { weekId: string; weekNumber: number; programName: string; programId: string }> = {};
+    for (const prog of Object.values(progs) as any[]) {
+      if (!prog || prog.deleted) continue;
+      for (const week of Object.values(weeks) as any[]) {
+        if (
+          week &&
+          !week.deleted &&
+          week.program_id === prog.id &&
+          week.week_number === (prog.current_week ?? 1)
+        ) {
+          currentWeekIds[week.id] = {
+            weekId: week.id,
+            weekNumber: week.week_number,
+            programName: prog.name,
+            programId: prog.id,
+          };
+        }
+      }
+    }
+
+    const result: (Tables<"workout_days"> & {
+      programName: string;
+      programId: string;
+      weekNumber: number;
+    })[] = [];
+
+    for (const day of Object.values(days) as any[]) {
+      if (!day || day.deleted) continue;
+      const weekInfo = currentWeekIds[day.program_week_id];
+      if (weekInfo) {
+        result.push({
+          ...day,
+          programName: weekInfo.programName,
+          programId: weekInfo.programId,
+          weekNumber: weekInfo.weekNumber,
+        });
+      }
+    }
+
+    return result.sort((a, b) => {
+      if (a.programName !== b.programName) return a.programName.localeCompare(b.programName);
+      return a.day_number - b.day_number;
+    });
+  });
+}
+
+/** Returns all workout templates */
+export function useWorkoutTemplates(): Tables<"workout_templates">[] {
+  return useSelector(() => {
+    const data = workoutTemplates$.get();
+    if (!data) return [];
+    return (
+      Object.values(data)
+        .filter((t: any) => t && !t.deleted) as Tables<"workout_templates">[]
+    ).sort(
+      (a, b) =>
+        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime(),
+    );
+  });
+}
+
+/** Returns template items for a given template, sorted by sort_order */
+export function useTemplateItems(
+  templateId: string | undefined,
+): Tables<"template_items">[] {
+  return useSelector(() => {
+    if (!templateId) return [];
+    const data = templateItems$.get();
+    if (!data) return [];
+    return (
+      Object.values(data)
+        .filter(
+          (i: any) => i && !i.deleted && i.template_id === templateId,
+        ) as Tables<"template_items">[]
+    ).sort((a, b) => a.sort_order - b.sort_order);
+  });
+}
+
+/** Returns exercise groups from multiple workout day IDs combined */
+export function useMultiDayExercises(
+  workoutDayIds: string[],
+): ExerciseGroup[] {
+  return useSelector(() => {
+    if (workoutDayIds.length === 0) return [];
+
+    const sets = workoutSets$.get();
+    if (!sets) return [];
+
+    const exData = exercises$.get();
+    const dayIdSet = new Set(workoutDayIds);
+
+    const allSets = Object.values(sets).filter(
+      (s: any) => s && !s.deleted && dayIdSet.has(s.workout_day_id),
+    ) as Tables<"workout_sets">[];
+
+    const groups: Record<string, ExerciseGroup> = {};
+    const order: string[] = [];
+
+    allSets
       .sort((a, b) => a.set_number - b.set_number)
       .forEach((set) => {
         if (!groups[set.exercise_id]) {

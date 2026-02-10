@@ -12,6 +12,18 @@ export default function RootLayout() {
           name="onboarding"
           options={{ title: "Set Up Program" }}
         />
+        <Stack.Screen
+          name="program-type"
+          options={{ title: "New Program" }}
+        />
+        <Stack.Screen
+          name="program-detail"
+          options={{ title: "Program" }}
+        />
+        <Stack.Screen
+          name="active-workout"
+          options={{ title: "Workout", headerBackTitle: "Back" }}
+        />
         <Stack.Screen name="index" options={{ headerShown: false }} />
       </Stack>
     </AuthProvider>
