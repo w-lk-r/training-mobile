@@ -6,9 +6,9 @@ Transform the current todo demo app into a local-first gym training app. Users s
 
 ---
 
-## Phase 1: Foundation (Auth + Schema + Local-First)
+## Phase 1: Foundation (Auth + Schema + Local-First) ✅
 
-### 1.1 Database Migration
+### 1.1 Database Migration ✅
 
 **New file:** `supabase/migrations/<timestamp>_gym_schema.sql`
 
@@ -34,7 +34,7 @@ All tables get:
 
 Then regenerate `utils/database.types.ts` via `npx supabase gen types`.
 
-### 1.2 Auth Setup
+### 1.2 Auth Setup ✅
 
 **Modify:** `utils/supabase.ts`
 - Uncomment auth config (AsyncStorage, autoRefreshToken, persistSession)
@@ -55,7 +55,7 @@ Then regenerate `utils/database.types.ts` via `npx supabase gen types`.
 - Route to auth screens or main app based on session state
 - App works without auth (local-only mode)
 
-### 1.3 Local-First Observables
+### 1.3 Local-First Observables ✅
 
 **Modify:** `utils/supabase.ts`
 - Remove todos observable and helpers
@@ -69,16 +69,16 @@ Then regenerate `utils/database.types.ts` via `npx supabase gen types`.
 - `migrateLocalDataToSupabase(userId)` — iterates all observables, replaces `user_id: 'local'` with real UUID
 - Called once on first signup/login before enabling sync
 
-### 1.4 Update App Entry
+### 1.4 Update App Entry ✅
 
 **Modify:** `app/index.tsx`
 - Replace todo UI with gym app home screen (or redirect to tabs)
 
 ---
 
-## Phase 2: Gym Features
+## Phase 2: Gym Features ✅
 
-### 2.1 Types & Services
+### 2.1 Types & Services ✅
 
 **New file:** `types/program.ts`
 - TypeScript interfaces for program template, week structure, set scheme
@@ -98,13 +98,13 @@ Then regenerate `utils/database.types.ts` via `npx supabase gen types`.
 - Calculate new maxes based on performance (did they complete all reps? RPE?)
 - Regenerate next cycle with updated weights
 
-### 2.2 Hooks
+### 2.2 Hooks ✅
 
 **New file:** `hooks/use-exercises.ts` — list exercises, get current maxes
 **New file:** `hooks/use-program.ts` — active program, current week workouts
 **New file:** `hooks/use-workout-session.ts` — start session, log sets, end session
 
-### 2.3 UI Screens
+### 2.3 UI Screens ✅
 
 **New file:** `app/(tabs)/_layout.tsx` — Bottom tab navigation
 **New file:** `app/(tabs)/home.tsx` — Program overview, current week, next workout
@@ -167,11 +167,59 @@ Then regenerate `utils/database.types.ts` via `npx supabase gen types`.
 
 ---
 
+## Phase 2.5: Code Review Fixes
+
+Branch: `claude/address-review-feedback-T2hkj`
+
+Addressed priority action #1 from `CODE_REVIEW.md` (overall rating 6.5/10).
+
+### 2.5.1 Error Handling ✅
+
+- **`auth-context.tsx`:** Added `.catch()` / `.finally()` to `getSession()` so `isLoading` resolves even on failure. Added `await` + `try/catch` around `migrateLocalDataToSupabase()`.
+- **`program-generator.ts`:** Wrapped `generateProgram()` in `try/catch` with rollback via `deleteProgram()` on partial failure.
+- **`OnboardingScreen.tsx`:** Wrapped `createProgramFromMaxes()` in `try/catch` with user-facing error alert.
+
+### 2.5.2 Graceful Retry UX ✅
+
+- **`getSession` failure:** Alert with "Retry" (calls `loadSession()` again) and "Continue Offline" options.
+- **Migration failure:** Informative alert explaining local data is safe and will sync on next sign-in.
+- **Program generation failure:** Alert with "Please try again" — user retaps Generate with inputs still filled.
+
+### 2.5.3 Remaining Code Review Items (Not Yet Addressed)
+
+- [ ] Fix session lifecycle — persist active session, set `completed_at` on end, prevent duplicates
+- [ ] Add week advancement logic so the program actually progresses
+- [ ] Replace `as any` casts with proper typing throughout hooks
+- [ ] Add unit tests for `program-generator.ts` and custom hooks
+- [ ] Move `.env` to `.gitignore` with `.env.example` template
+- [ ] Fix O(n) full-table scans in selectors (indexed lookup maps)
+- [ ] Flatten `deleteProgram` O(n^3) cascade
+- [ ] Add loading states to screens
+- [ ] Fix `HistoryScreen` untracked observable dependency
+- [ ] Replace emoji HTML entities with `@expo/vector-icons`
+- [ ] Extract shared theme/colors constants
+
+---
+
 ## Phase 3: Multi-Program & Workout Composer (In Progress)
 
 Branch: `claude/multi-program-templates-T2hkj`
 
-The app now supports multiple concurrent programs and mixing workout days from different programs into a single session. The foundation is in place (see commit `0bb5e1f`), but the following items still need work:
+The app now supports multiple concurrent programs and mixing workout days from different programs into a single session. The foundation is in place (see commit `0bb5e1f`).
+
+### Completed ✅
+
+- **Schema:** `programs.program_type` column, `session_workout_days` junction table, `workout_templates` + `template_items` tables, migration `20260210000000_multi_program.sql`
+- **Observables + CRUD:** `sessionWorkoutDays$`, `workoutTemplates$`, `templateItems$`, updated `addProgram()` with `programType`/`weeksCount`, new helpers (`addSessionWorkoutDay`, `addWorkoutTemplate`, `addTemplateItem`, `deleteTemplate`)
+- **Hooks:** `useAllPrograms`, `useAllCurrentWorkoutDays`, `useWorkoutTemplates`, `useTemplateItems`, `useMultiDayExercises`
+- **ProgramListScreen:** Browse all programs with type badges, long-press to delete, "+ New" button
+- **ProgramDetailScreen:** View a specific program's weeks and days (extracted from old `HomeScreen`)
+- **ProgramTypeScreen:** Pick program type (powerlifting, oly, CrossFit, zone 2) when creating
+- **WorkoutComposerScreen:** Select days from any programs, reorder with up/down arrows, start combined workout, saved templates section
+- **WorkoutScreen:** Supports multi-day sessions via comma-separated `dayIds`, save-as-template prompt on finish
+- **Navigation:** Programs tab shows list, Start tab shows composer, new stack routes for `program-detail`, `program-type`, `active-workout`
+
+### Remaining:
 
 ### 3.1 Program-Type-Specific Generators
 
