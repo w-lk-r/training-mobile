@@ -5,7 +5,7 @@ import { allObservables, authUserId$ } from "./supabase";
  * Called once on first signup/login before enabling sync.
  * Replaces any 'local' user_id values with the authenticated user's UUID.
  */
-export function migrateLocalDataToSupabase(userId: string) {
+export async function migrateLocalDataToSupabase(userId: string) {
   authUserId$.set(userId);
 
   for (const obs$ of Object.values(allObservables)) {

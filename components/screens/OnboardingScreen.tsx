@@ -47,8 +47,16 @@ export default function OnboardingScreen() {
       parsed[lift.key] = value;
     }
 
-    createProgramFromMaxes(parsed);
-    router.replace("/(tabs)/home");
+    try {
+      createProgramFromMaxes(parsed);
+      router.replace("/(tabs)/home");
+    } catch (error) {
+      console.error("Failed to generate program:", error);
+      Alert.alert(
+        "Error",
+        "Failed to generate your program. Please try again.",
+      );
+    }
   };
 
   return (
