@@ -182,26 +182,33 @@ When evaluating a new feature, ask:
 
 -----
 
-Further Features (Planned / Under Consideration)
-Whiteboard & Screenshot Import
+## Further Features (Planned / Under Consideration)
+
+### Whiteboard & Screenshot Import
+
 Photo or screenshot of any workout source → structured workout ready to log. One tap to confirm, then logging begins.
-Sources to support:
-	∙	Gym whiteboards (chalk, poor lighting, diagonal writing, smudges)
-	∙	Screenshots from coaching apps (TrainHeroic, TrainingPeaks, TrueCoach)
-	∙	Instagram posts and coach programming screenshots
-	∙	PDF exports from coaches
-	∙	Screenshots from group chats
-Notation to parse:
-	∙	Standard shorthand: 5x3 @80%, 3x10 rest 90s
-	∙	CrossFit notation: AMRAP 12, For Time, EMOM 20
-	∙	Percentage-based loading: 70% 1RM, @RPE 8
-	∙	Supersets and circuits
-	∙	Rest periods in various formats
-Why this matters strategically:
-Removes the biggest adoption barrier for athletes following external programming. Reppit becomes the logging layer on top of any programming source — not a competitor to coaches or other platforms. Athletes following online coaches, a local coach’s whiteboard, or a PDF block can log in Reppit without re-entering anything manually.
-Bilingual consideration:
+
+**Sources to support:**
+- Gym whiteboards (chalk, poor lighting, diagonal writing, smudges)
+- Screenshots from coaching apps (TrainHeroic, TrainingPeaks, TrueCoach)
+- Instagram posts and coach programming screenshots
+- PDF exports from coaches
+- Screenshots from group chats
+
+**Notation to parse:**
+- Standard shorthand: `5x3 @80%`, `3x10 rest 90s`
+- CrossFit notation: `AMRAP 12`, `For Time`, `EMOM 20`
+- Percentage-based loading: `70% 1RM`, `@RPE 8`
+- Supersets and circuits
+- Rest periods in various formats
+
+**Why this matters strategically:**
+Removes the biggest adoption barrier for athletes following external programming. Reppit becomes the logging layer on top of any programming source — not a competitor to coaches or other platforms. Athletes following online programming, a local coach's whiteboard, or a PDF block can log in Reppit without re-entering anything manually.
+
+**Bilingual consideration:**
 Japanese gym whiteboards mix kanji, katakana, and numbers in non-standard ways. Handling this well is a meaningful differentiator in the Japanese market where no competitor is optimizing for it.
-Implementation note:
+
+**Implementation note:**
 Built on vision model API (Anthropic or similar). Core challenge is reliable conversion of freeform whiteboard text into structured workout JSON. Worth a dedicated parsing pipeline with sport-specific notation rules rather than a generic OCR approach.
 
 *This document should be updated as the product evolves. When in doubt, return to the North Star: a product genuinely loved by the users who never pay.*
