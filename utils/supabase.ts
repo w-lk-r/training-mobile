@@ -240,6 +240,15 @@ export function addMaxLift(exerciseId: string, weightKg: number) {
   return id;
 }
 
+export async function clearLocalCache() {
+  const keys = await AsyncStorage.getAllKeys();
+  // Remove all Legend State persisted data keys but preserve auth session
+  const cacheKeys = keys.filter(
+    (k) => !k.startsWith("supabase") && !k.startsWith("sb-"),
+  );
+  await AsyncStorage.multiRemove(cacheKeys);
+}
+
 export function addProgram(
   name: string,
   description?: string,

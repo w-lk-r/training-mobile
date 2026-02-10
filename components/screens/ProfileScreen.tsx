@@ -1,9 +1,10 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { observer } from "@legendapp/state/react";
 import { router } from "expo-router";
 import { useAuth } from "../../contexts/auth-context";
 import { useExercises, useMaxLifts } from "../../hooks/use-exercises";
+import { clearLocalCache } from "../../utils/supabase";
 
 const ProfileScreen = observer(() => {
   const { session, signOut } = useAuth();
@@ -72,6 +73,32 @@ const ProfileScreen = observer(() => {
           </Text>
         </TouchableOpacity>
       )}
+
+      <TouchableOpacity
+        style={styles.clearCacheButton}
+        onPress={() =>
+          Alert.alert(
+            "Clear Local Cache",
+            "This will remove all locally cached data. If you're signed in, your data will re-sync from the server. If you're offline-only, all data will be lost. Continue?",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Clear Cache",
+                style: "destructive",
+                onPress: async () => {
+                  await clearLocalCache();
+                  Alert.alert(
+                    "Cache Cleared",
+                    "Please restart the app for changes to take effect.",
+                  );
+                },
+              },
+            ],
+          )
+        }
+      >
+        <Text style={styles.clearCacheText}>Clear Local Cache</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 });
@@ -153,6 +180,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   signOutText: {
+    color: "#c33",
+    fontSize: 14,
+  },
+  clearCacheButton: {
+    marginTop: 32,
+    alignSelf: "center",
+    paddingVertical: 8,
+  },
+  clearCacheText: {
     color: "#c33",
     fontSize: 14,
   },
