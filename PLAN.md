@@ -164,3 +164,47 @@ Then regenerate `utils/database.types.ts` via `npx supabase gen types`.
 4. Sign up -> local data migrates -> Supabase dashboard shows records with correct user_id
 5. Sign out -> data still local -> sign in -> sync resumes
 6. Complete 4-week cycle -> progression calculates new maxes -> new cycle generated
+
+---
+
+## Phase 3: Multi-Program & Workout Composer (In Progress)
+
+Branch: `claude/multi-program-templates-T2hkj`
+
+The app now supports multiple concurrent programs and mixing workout days from different programs into a single session. The foundation is in place (see commit `0bb5e1f`), but the following items still need work:
+
+### 3.1 Program-Type-Specific Generators
+
+Currently all program types (powerlifting, Olympic weightlifting, CrossFit, zone 2) generate the same 4-week powerlifting template. Each type needs its own generator config:
+
+- **Olympic Weightlifting:** Snatch, clean & jerk, pulls, front squats. Different periodization (technique-heavy weeks vs intensity).
+- **CrossFit:** WOD-style programming with mixed modality (strength + gymnastics + cardio). May not follow a strict week/day structure.
+- **Zone 2 Cardio:** Duration and heart rate zone based, not sets/reps. Needs either new columns on `workout_sets` (e.g. `duration_minutes`, `target_hr_zone`) or a reinterpretation of existing fields.
+
+Create a `types/program-templates.ts` registry with a `ProgramTypeConfig` per type that drives the generator.
+
+### 3.2 Dynamic Onboarding Inputs Per Program Type
+
+`OnboardingScreen` currently always collects 4 powerlifting 1RM values. Each program type needs different inputs:
+
+- **Powerlifting:** 1RM for squat, bench, deadlift, press (current behavior)
+- **Olympic Weightlifting:** 1RM for snatch, clean & jerk, front squat, back squat
+- **CrossFit:** Benchmark lifts + bodyweight movement capabilities
+- **Zone 2 Cardio:** Resting heart rate, max heart rate, preferred modality (run/bike/row)
+
+Refactor `OnboardingScreen` to read input fields from the program template config and render dynamically.
+
+### 3.3 Drag-and-Drop Reordering
+
+`WorkoutComposerScreen` currently uses up/down arrow buttons for reordering workout days. Replace with proper drag-and-drop using `react-native-draggable-flatlist` or similar for a more natural UX.
+
+### 3.4 History Filtering by Program
+
+`HistoryScreen` currently shows all sessions globally. Add a filter/toggle to show sessions for a specific program or all programs. Resolve `workout_day_id -> program_week_id -> program_id` for each session and add a program filter dropdown.
+
+### 3.5 Template Management
+
+- View/edit saved templates (currently can only create and use them)
+- Delete templates
+- Rename templates
+- Reorder exercises within a template after creation
