@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { createProgramFromMaxes } from "../../services/program-generator";
 import type { MainLiftCategory } from "../../types/program";
 
@@ -23,6 +23,7 @@ const LIFTS: { key: MainLiftCategory; label: string }[] = [
 ];
 
 export default function OnboardingScreen() {
+  const { programType } = useLocalSearchParams<{ programType?: string }>();
   const [maxes, setMaxes] = useState<Record<string, string>>({
     squat: "",
     bench: "",
@@ -48,7 +49,7 @@ export default function OnboardingScreen() {
     }
 
     try {
-      createProgramFromMaxes(parsed);
+      createProgramFromMaxes(parsed, programType);
       router.replace("/(tabs)/home");
     } catch (error) {
       console.error("Failed to generate program:", error);

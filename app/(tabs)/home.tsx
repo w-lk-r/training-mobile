@@ -1,2 +1,2 @@
-import HomeScreen from "../../components/screens/HomeScreen";
-export default HomeScreen;
+import ProgramListScreen from "../../components/screens/ProgramListScreen";
+export default ProgramListScreen;

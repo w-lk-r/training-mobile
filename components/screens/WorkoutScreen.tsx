@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,45 +13,76 @@ import { observer } from "@legendapp/state/react";
 import { useLocalSearchParams, router } from "expo-router";
 import {
   useWorkoutDayExercises,
+  useMultiDayExercises,
   type ExerciseGroup,
 } from "../../hooks/use-program";
 import { useMaxLifts } from "../../hooks/use-exercises";
 import { useWorkoutSession } from "../../hooks/use-workout-session";
+import {
+  addWorkoutTemplate,
+  addTemplateItem,
+  addSessionWorkoutDay,
+} from "../../utils/supabase";
 
 const WorkoutScreen = observer(() => {
-  const { dayId, dayName } = useLocalSearchParams<{
-    dayId: string;
-    dayName: string;
+  const { dayId, dayName, dayIds, templateId } = useLocalSearchParams<{
+    dayId?: string;
+    dayName?: string;
+    dayIds?: string;
+    templateId?: string;
   }>();
 
-  if (!dayId) {
+  // Support multiple day IDs (comma-separated) or single dayId
+  const workoutDayIds = dayIds
+    ? dayIds.split(",").filter(Boolean)
+    : dayId
+      ? [dayId]
+      : [];
+
+  if (workoutDayIds.length === 0 && !templateId) {
     return (
       <SafeAreaView style={styles.container} edges={["bottom"]}>
         <View style={styles.empty}>
           <Text style={styles.emptyText}>
-            Select a workout from the Program tab.
+            Select a workout from the Program tab or use Start Workout to
+            compose one.
           </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  return <ActiveWorkout dayId={dayId} dayName={dayName ?? "Workout"} />;
+  return (
+    <ActiveWorkout
+      dayIds={workoutDayIds}
+      dayName={dayName ?? "Workout"}
+    />
+  );
 });
 
 const ActiveWorkout = observer(
-  ({ dayId, dayName }: { dayId: string; dayName: string }) => {
-    const exerciseGroups = useWorkoutDayExercises(dayId);
+  ({ dayIds, dayName }: { dayIds: string[]; dayName: string }) => {
+    // Use multi-day hook when multiple days, single-day hook when one
+    const exerciseGroups =
+      dayIds.length === 1
+        ? useWorkoutDayExercises(dayIds[0])
+        : useMultiDayExercises(dayIds);
     const maxLifts = useMaxLifts();
     const { sessionId, startSession, logSet, endSession } =
-      useWorkoutSession(dayId);
+      useWorkoutSession(dayIds[0]);
     const [completedSets, setCompletedSets] = useState<Set<string>>(new Set());
     const [setInputs, setSetInputs] = useState<
       Record<string, { weight: string; reps: string }>
     >({});
 
     const handleStartSession = () => {
-      startSession();
+      const id = startSession();
+      // Link all workout days to this session
+      if (dayIds.length > 1) {
+        dayIds.forEach((dayId, index) => {
+          addSessionWorkoutDay(id, dayId, index);
+        });
+      }
     };
 
     const handleCompleteSet = (
@@ -71,20 +103,60 @@ const ActiveWorkout = observer(
 
     const handleFinish = () => {
       endSession();
-      router.back();
+
+      // Offer to save as template if multiple days were combined
+      if (dayIds.length > 1) {
+        Alert.alert(
+          "Save as Template?",
+          "Save this workout combination and order as a template for quick access next time.",
+          [
+            { text: "Skip", style: "cancel", onPress: () => router.back() },
+            {
+              text: "Save",
+              onPress: () => promptSaveTemplate(),
+            },
+          ],
+        );
+      } else {
+        router.back();
+      }
+    };
+
+    const promptSaveTemplate = () => {
+      Alert.prompt(
+        "Template Name",
+        "Give this workout template a name.",
+        [
+          { text: "Cancel", style: "cancel", onPress: () => router.back() },
+          {
+            text: "Save",
+            onPress: (name) => {
+              if (name && name.trim()) {
+                saveAsTemplate(name.trim(), exerciseGroups, dayIds);
+              }
+              router.back();
+            },
+          },
+        ],
+        "plain-text",
+        "",
+      );
     };
 
     const getWeight = (exerciseId: string, percentage: number | null) => {
       if (!percentage) return 0;
       const max = maxLifts[exerciseId];
       if (!max) return 0;
-      return Math.round(max * percentage * 2) / 2; // round to nearest 0.5
+      return Math.round(max * percentage * 2) / 2;
     };
+
+    const title =
+      dayIds.length > 1 ? `Combined Workout (${dayIds.length} days)` : dayName;
 
     return (
       <SafeAreaView style={styles.container} edges={["bottom"]}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Text style={styles.heading}>{dayName}</Text>
+          <Text style={styles.heading}>{title}</Text>
 
           {!sessionId ? (
             <TouchableOpacity
@@ -126,6 +198,32 @@ const ActiveWorkout = observer(
     );
   },
 );
+
+function saveAsTemplate(
+  name: string,
+  exerciseGroups: ExerciseGroup[],
+  dayIds: string[],
+) {
+  const templateId = addWorkoutTemplate(name);
+  let sortOrder = 0;
+
+  exerciseGroups.forEach((group) => {
+    group.sets.forEach((set) => {
+      addTemplateItem(
+        templateId,
+        group.exerciseId,
+        sortOrder,
+        set.reps,
+        set.percentage_of_max,
+        set.rpe,
+        set.workout_day_id,
+      );
+      sortOrder++;
+    });
+  });
+
+  return templateId;
+}
 
 function ExerciseGroupCard({
   group,
@@ -183,7 +281,7 @@ function ExerciseGroupCard({
               style={[styles.setInput, styles.weightCol]}
               value={input?.weight ?? ""}
               onChangeText={(v) => onSetInputChange(set.id, "weight", v)}
-              placeholder={prescribedWeight ? `${prescribedWeight}` : "—"}
+              placeholder={prescribedWeight ? `${prescribedWeight}` : "\u2014"}
               keyboardType="decimal-pad"
               editable={!isDone}
             />
@@ -208,10 +306,10 @@ function ExerciseGroupCard({
                     )
                   }
                 >
-                  <Text style={styles.checkText}>&#x2713;</Text>
+                  <Text style={styles.checkText}>{"\u2713"}</Text>
                 </TouchableOpacity>
               ) : (
-                <Text style={styles.doneCheck}>&#x2705;</Text>
+                <Text style={styles.doneCheck}>{"\u2705"}</Text>
               )}
             </View>
           </View>
@@ -239,6 +337,8 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: "#999",
+    textAlign: "center",
+    paddingHorizontal: 24,
   },
   heading: {
     fontSize: 24,

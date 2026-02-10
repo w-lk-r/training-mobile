@@ -1,2 +1,2 @@
-import WorkoutScreen from "../../components/screens/WorkoutScreen";
-export default WorkoutScreen;
+import WorkoutComposerScreen from "../../components/screens/WorkoutComposerScreen";
+export default WorkoutComposerScreen;

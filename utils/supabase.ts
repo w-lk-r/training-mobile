@@ -149,6 +149,39 @@ export const setLogs$ = observable(
   }),
 );
 
+export const sessionWorkoutDays$ = observable(
+  customSynced({
+    supabase,
+    collection: "session_workout_days",
+    actions: ["read", "create", "update", "delete"],
+    realtime: true,
+    persist: { name: "session_workout_days", retrySync: true },
+    retry: { infinite: true },
+  }),
+);
+
+export const workoutTemplates$ = observable(
+  customSynced({
+    supabase,
+    collection: "workout_templates",
+    actions: ["read", "create", "update", "delete"],
+    realtime: true,
+    persist: { name: "workout_templates", retrySync: true },
+    retry: { infinite: true },
+  }),
+);
+
+export const templateItems$ = observable(
+  customSynced({
+    supabase,
+    collection: "template_items",
+    actions: ["read", "create", "update", "delete"],
+    realtime: true,
+    persist: { name: "template_items", retrySync: true },
+    retry: { infinite: true },
+  }),
+);
+
 // All observables for bulk sync toggling
 export const allObservables: Record<string, Observable> = {
   exercises: exercises$,
@@ -159,6 +192,9 @@ export const allObservables: Record<string, Observable> = {
   workoutSets: workoutSets$,
   workoutSessions: workoutSessions$,
   setLogs: setLogs$,
+  sessionWorkoutDays: sessionWorkoutDays$,
+  workoutTemplates: workoutTemplates$,
+  templateItems: templateItems$,
 };
 
 // ============================================================
@@ -204,16 +240,22 @@ export function addMaxLift(exerciseId: string, weightKg: number) {
   return id;
 }
 
-export function addProgram(name: string, description?: string) {
+export function addProgram(
+  name: string,
+  description?: string,
+  weeksCount?: number,
+  programType?: string,
+) {
   const id = generateId();
   programs$[id].assign({
     id,
     user_id: getUserId(),
     name,
     description: description ?? null,
-    weeks_count: 4,
+    weeks_count: weeksCount ?? 4,
     current_week: 1,
     start_date: new Date().toISOString(),
+    program_type: programType ?? "powerlifting",
   });
   return id;
 }
@@ -300,15 +342,77 @@ export function deleteProgram(programId: string) {
   }
 }
 
-export function addWorkoutSession(workoutDayId: string) {
+export function addWorkoutSession(workoutDayId?: string) {
   const id = generateId();
   workoutSessions$[id].assign({
     id,
     user_id: getUserId(),
-    workout_day_id: workoutDayId,
+    workout_day_id: workoutDayId ?? null,
     completed_at: new Date().toISOString(),
   });
   return id;
+}
+
+export function addSessionWorkoutDay(
+  sessionId: string,
+  workoutDayId: string,
+  sortOrder: number,
+) {
+  const id = generateId();
+  sessionWorkoutDays$[id].assign({
+    id,
+    user_id: getUserId(),
+    session_id: sessionId,
+    workout_day_id: workoutDayId,
+    sort_order: sortOrder,
+  });
+  return id;
+}
+
+export function addWorkoutTemplate(name: string) {
+  const id = generateId();
+  workoutTemplates$[id].assign({
+    id,
+    user_id: getUserId(),
+    name,
+  });
+  return id;
+}
+
+export function addTemplateItem(
+  templateId: string,
+  exerciseId: string,
+  sortOrder: number,
+  reps: number,
+  percentageOfMax: number | null,
+  rpe: number | null,
+  workoutDayId: string | null,
+) {
+  const id = generateId();
+  templateItems$[id].assign({
+    id,
+    user_id: getUserId(),
+    template_id: templateId,
+    exercise_id: exerciseId,
+    sort_order: sortOrder,
+    reps,
+    percentage_of_max: percentageOfMax,
+    rpe,
+    workout_day_id: workoutDayId,
+  });
+  return id;
+}
+
+export function deleteTemplate(templateId: string) {
+  workoutTemplates$[templateId].deleted.set(true);
+  const items = templateItems$.get();
+  if (items) {
+    for (const item of Object.values(items) as any[]) {
+      if (item && item.template_id === templateId && !item.deleted) {
+        templateItems$[item.id].deleted.set(true);
+      }
+    }
+  }
 }
 
 export function addSetLog(
