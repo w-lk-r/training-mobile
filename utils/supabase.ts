@@ -281,6 +281,7 @@ export function addProgram(
   description?: string,
   weeksCount?: number,
   programType?: string,
+  wizardConfig?: object,
 ) {
   const id = generateId();
   programs$[id].assign({
@@ -292,6 +293,7 @@ export function addProgram(
     current_week: 1,
     start_date: new Date().toISOString(),
     program_type: programType ?? "powerlifting",
+    wizard_config: wizardConfig ?? null,
   });
   return id;
 }
