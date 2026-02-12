@@ -12,26 +12,32 @@ interface ProgramTypeOption {
 
 const PROGRAM_TYPES: ProgramTypeOption[] = [
   {
+    type: "custom",
+    name: "Build Custom Program",
+    description: "Full flexibility: choose sessions, exercises, weeks, and weekly progression rules.",
+    detail: "Wizard builder",
+  },
+  {
     type: "powerlifting",
-    name: "Powerlifting",
+    name: "Quick Start: Powerlifting",
     description: "Squat, bench, deadlift, and press with linear periodization.",
     detail: "4 weeks, 4 days/week",
   },
   {
     type: "olympic_weightlifting",
-    name: "Olympic Weightlifting",
+    name: "Quick Start: Olympic Weightlifting",
     description: "Snatch and clean & jerk focused with pulls and squats.",
     detail: "4 weeks, 5 days/week",
   },
   {
     type: "crossfit",
-    name: "CrossFit",
+    name: "Quick Start: CrossFit",
     description: "Mixed modality workouts combining strength, gymnastics, and cardio.",
     detail: "4 weeks, 5 days/week",
   },
   {
     type: "zone2_cardio",
-    name: "Zone 2 Cardio",
+    name: "Quick Start: Zone 2 Cardio",
     description: "Low-intensity steady-state cardio for aerobic base building.",
     detail: "Ongoing, 3-5 days/week",
   },
@@ -52,10 +58,12 @@ export default function ProgramTypeScreen() {
             key={pt.type}
             style={styles.card}
             onPress={() =>
-              router.push({
-                pathname: "/onboarding",
-                params: { programType: pt.type },
-              })
+              pt.type === "custom"
+                ? router.push("/program-wizard")
+                : router.push({
+                    pathname: "/onboarding",
+                    params: { programType: pt.type },
+                  })
             }
           >
             <View style={styles.cardContent}>

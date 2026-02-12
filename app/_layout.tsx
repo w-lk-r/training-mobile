@@ -17,6 +17,10 @@ export default function RootLayout() {
           options={{ title: "New Program" }}
         />
         <Stack.Screen
+          name="program-wizard"
+          options={{ title: "Build Program" }}
+        />
+        <Stack.Screen
           name="program-detail"
           options={{ title: "Program" }}
         />
