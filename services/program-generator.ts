@@ -4,6 +4,8 @@ import {
   DEFAULT_EXERCISES,
   type MainLiftCategory,
   type MaxLiftMap,
+  type WizardConfig,
+  type WizardExercise,
 } from "../types/program";
 import {
   addExercise,
@@ -193,4 +195,88 @@ export function createProgramFromMaxes(
   }
 
   return generateProgram(maxLifts, exerciseIds, programType);
+}
+
+// ============================================================
+// Wizard-based program generator
+// ============================================================
+
+/**
+ * Computes the reps for a given exercise on a given week,
+ * applying the progression rule.
+ */
+function computeReps(exercise: WizardExercise, weekIndex: number): number {
+  if (exercise.progression.type === "increment_reps") {
+    return exercise.reps + exercise.progression.amount * weekIndex;
+  }
+  return exercise.reps;
+}
+
+/**
+ * Computes the percentage for a given exercise on a given week,
+ * applying the progression rule. Returns null for absolute-weight exercises.
+ */
+function computePercentage(
+  exercise: WizardExercise,
+  weekIndex: number,
+): number | null {
+  if (exercise.percentage === null) return null;
+  if (exercise.progression.type === "increment_percentage") {
+    return exercise.percentage + exercise.progression.amount * weekIndex;
+  }
+  return exercise.percentage;
+}
+
+/**
+ * Generates a fully flexible program from a wizard configuration.
+ * Creates all weeks, days, and sets with progression applied.
+ *
+ * @param config - The wizard configuration from the UI
+ * @returns The program ID
+ */
+export function generateProgramFromWizard(config: WizardConfig): string {
+  const programId = addProgram(
+    config.programName,
+    undefined,
+    config.weeksCount,
+    "custom",
+    config,
+  );
+
+  try {
+    for (let week = 0; week < config.weeksCount; week++) {
+      const weekId = addProgramWeek(programId, week + 1);
+
+      config.sessions.forEach((session, sessionIdx) => {
+        const dayId = addWorkoutDay(weekId, sessionIdx + 1, session.name);
+        let setCounter = 1;
+
+        session.exercises.forEach((exercise) => {
+          const reps = Math.max(1, Math.round(computeReps(exercise, week)));
+          const percentage = computePercentage(exercise, week);
+
+          for (let s = 0; s < exercise.sets; s++) {
+            addWorkoutSet(
+              dayId,
+              exercise.exerciseId,
+              setCounter,
+              reps,
+              percentage,
+              null,
+            );
+            setCounter++;
+          }
+        });
+      });
+    }
+  } catch (error) {
+    try {
+      deleteProgram(programId);
+    } catch (cleanupError) {
+      console.error("Failed to clean up partial program:", cleanupError);
+    }
+    throw error;
+  }
+
+  return programId;
 }

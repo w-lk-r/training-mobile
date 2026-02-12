@@ -110,3 +110,40 @@ export const ACCESSORY_SCHEME: SetScheme[] = [
   { reps: 10, percentage: null },
   { reps: 10, percentage: null },
 ];
+
+// ============================================================
+// Wizard Config Types (for flexible program builder)
+// ============================================================
+
+/** How an exercise progresses week-to-week */
+export type ProgressionRule =
+  | { type: "fixed" }
+  | { type: "increment_percentage"; amount: number } // e.g. 0.025 = +2.5% per week
+  | { type: "increment_reps"; amount: number } // e.g. 1 = +1 rep per week
+  | { type: "increment_weight"; amount: number }; // e.g. 2.5 = +2.5kg per week
+
+/** An exercise configured in the wizard */
+export interface WizardExercise {
+  exerciseId: string;
+  exerciseName: string;
+  sets: number;
+  reps: number;
+  /** Percentage of 1RM (e.g. 0.70 = 70%). Null when using absolute weight. */
+  percentage: number | null;
+  /** Starting absolute weight in kg. Null when using percentage. */
+  weight: number | null;
+  progression: ProgressionRule;
+}
+
+/** A unique training session configured in the wizard */
+export interface WizardSession {
+  name: string;
+  exercises: WizardExercise[];
+}
+
+/** Full wizard configuration stored on the program */
+export interface WizardConfig {
+  programName: string;
+  weeksCount: number;
+  sessions: WizardSession[];
+}
