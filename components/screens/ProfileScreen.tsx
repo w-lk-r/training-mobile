@@ -4,13 +4,15 @@ import { observer } from "@legendapp/state/react";
 import { router } from "expo-router";
 import { useAuth } from "../../contexts/auth-context";
 import { useExercises, useMaxLifts } from "../../hooks/use-exercises";
-import { clearLocalCache } from "../../utils/supabase";
+import { useAllPrograms } from "../../hooks/use-program";
+import { clearLocalCache, deleteProgram } from "../../utils/supabase";
 import { Colors } from "../../constants/colors";
 
 const ProfileScreen = observer(() => {
   const { session, signOut } = useAuth();
   const exercises = useExercises();
   const maxLifts = useMaxLifts();
+  const programs = useAllPrograms();
 
   const mainLifts = exercises.filter((e) =>
     ["squat", "bench", "deadlift", "press"].includes(e.category ?? ""),
@@ -73,6 +75,40 @@ const ProfileScreen = observer(() => {
             Update Max Lifts
           </Text>
         </TouchableOpacity>
+      )}
+
+      {programs.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Programs</Text>
+          {programs.map((prog) => (
+            <View key={prog.id} style={styles.programRow}>
+              <View style={styles.programInfo}>
+                <Text style={styles.programName}>{prog.name}</Text>
+                <Text style={styles.programMeta}>
+                  Week {prog.current_week} of {prog.weeks_count}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() =>
+                  Alert.alert(
+                    "Delete Program",
+                    `Are you sure you want to delete "${prog.name}"? This cannot be undone.`,
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: () => deleteProgram(prog.id),
+                      },
+                    ],
+                  )
+                }
+              >
+                <Text style={styles.deleteText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
       )}
 
       <TouchableOpacity
@@ -183,6 +219,30 @@ const styles = StyleSheet.create({
   signOutText: {
     color: Colors.danger,
     fontSize: 14,
+  },
+  programRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.surface,
+  },
+  programInfo: {
+    flex: 1,
+  },
+  programName: {
+    fontSize: 16,
+  },
+  programMeta: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  deleteText: {
+    color: Colors.danger,
+    fontSize: 14,
+    paddingLeft: 16,
   },
   clearCacheButton: {
     marginTop: 32,

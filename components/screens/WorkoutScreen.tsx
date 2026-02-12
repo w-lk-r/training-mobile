@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -107,12 +108,10 @@ const ActiveWorkout = observer(
         dayIds.length > 0 ? dayIds : ["adhoc"],
         adHocExerciseIds,
       );
-      // Link all workout days to this session
-      if (dayIds.length > 1) {
-        dayIds.forEach((dayId, index) => {
-          addSessionWorkoutDay(id, dayId, index);
-        });
-      }
+      // Link all workout days to this session (including single-day)
+      dayIds.forEach((dayId, index) => {
+        addSessionWorkoutDay(id, dayId, index);
+      });
     };
 
     const handleCompleteSet = (
@@ -170,13 +169,32 @@ const ActiveWorkout = observer(
     };
 
     const handleFinish = () => {
-      endSession();
-      // No router.back() — the workout tab auto-switches to composer view
-      // when activeSessionId$ is cleared
+      Alert.alert(
+        "Finish Workout",
+        "Are you sure you want to end this workout?",
+        [
+          { text: "Keep Going", style: "cancel" },
+          {
+            text: "Finish",
+            onPress: () => {
+              const totalSets = completedSets.size +
+                Object.values(adHocSets).reduce(
+                  (sum, sets) => sum + sets.filter((_, i) => completedAdHocSets.has(`${Object.keys(adHocSets).find((k) => adHocSets[k] === sets)}-${i}`)).length,
+                  0,
+                );
+              endSession();
+              Alert.alert(
+                "Workout Complete!",
+                `Great work! You completed ${completedSets.size} set${completedSets.size !== 1 ? "s" : ""}.`,
+              );
+            },
+          },
+        ],
+      );
     };
 
     const getWeight = (exerciseId: string, percentage: number | null) => {
-      if (!percentage) return 0;
+      if (percentage === null || percentage === undefined) return 0;
       const max = maxLifts[exerciseId];
       if (!max) return 0;
       return Math.round(max * percentage * 2) / 2;
