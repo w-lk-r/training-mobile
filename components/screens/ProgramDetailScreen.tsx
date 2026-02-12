@@ -6,6 +6,7 @@ import { useSelector } from "@legendapp/state/react";
 import { useCompletedWeeks, useWeekCompletion, useWeekWorkouts } from "../../hooks/use-program";
 import { setCurrentWeek, deleteProgram, programs$ } from "../../utils/supabase";
 import type { Tables } from "../../utils/database.types";
+import { Colors } from "../../constants/colors";
 
 const ProgramDetailScreen = observer(() => {
   const { programId } = useLocalSearchParams<{ programId: string }>();
@@ -121,7 +122,7 @@ export default ProgramDetailScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
   },
   scroll: {
     padding: 24,
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: "#999",
+    color: Colors.textMuted,
   },
   header: {
     marginBottom: 16,
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
   },
   weekLabel: {
     fontSize: 14,
-    color: "#666",
+    color: Colors.textSecondary,
     marginTop: 4,
   },
   weekProgress: {
@@ -156,19 +157,19 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: Colors.surface,
     alignItems: "center",
   },
   weekDotActive: {
-    backgroundColor: "#333",
+    backgroundColor: Colors.text,
   },
   weekDotText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#999",
+    color: Colors.textMuted,
   },
   weekDotTextActive: {
-    color: "#fff",
+    color: Colors.background,
   },
   sectionTitle: {
     fontSize: 18,
@@ -179,20 +180,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f8f8f8",
+    backgroundColor: Colors.surfaceLight,
     borderRadius: 12,
     padding: 20,
     marginBottom: 12,
   },
   dayCardCompleted: {
-    backgroundColor: "#f0f8f0",
+    backgroundColor: Colors.successLight,
   },
   checkmark: {
     position: "absolute",
     left: 20,
     fontSize: 16,
     fontWeight: "bold",
-    color: "#4a4",
+    color: Colors.successText,
   },
   dayName: {
     fontSize: 16,
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   deleteButtonText: {
-    color: "#c33",
+    color: Colors.danger,
     fontSize: 14,
   },
 });

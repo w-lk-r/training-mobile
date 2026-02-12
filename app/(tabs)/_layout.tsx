@@ -1,12 +1,13 @@
 import { Tabs } from "expo-router";
-import { Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "../../constants/colors";
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#333",
-        tabBarInactiveTintColor: "#999",
+        tabBarActiveTintColor: Colors.text,
+        tabBarInactiveTintColor: Colors.textMuted,
         tabBarStyle: { paddingBottom: 4 },
       }}
     >
@@ -14,8 +15,8 @@ export default function TabLayout() {
         name="home"
         options={{
           title: "Programs",
-          tabBarIcon: ({ color }) => (
-            <Text style={{ color, fontSize: 20 }}>&#x1F3CB;</Text>
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="barbell-outline" size={size} color={color} />
           ),
         }}
       />
@@ -23,8 +24,8 @@ export default function TabLayout() {
         name="workout"
         options={{
           title: "Workout",
-          tabBarIcon: ({ color }) => (
-            <Text style={{ color, fontSize: 20 }}>&#x1F4AA;</Text>
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="fitness-outline" size={size} color={color} />
           ),
         }}
       />
@@ -32,8 +33,8 @@ export default function TabLayout() {
         name="history"
         options={{
           title: "History",
-          tabBarIcon: ({ color }) => (
-            <Text style={{ color, fontSize: 20 }}>&#x1F4CA;</Text>
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="stats-chart-outline" size={size} color={color} />
           ),
         }}
       />
@@ -41,8 +42,8 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color }) => (
-            <Text style={{ color, fontSize: 20 }}>&#x2699;</Text>
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings-outline" size={size} color={color} />
           ),
         }}
       />

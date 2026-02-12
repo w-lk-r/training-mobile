@@ -3,6 +3,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { observer } from "@legendapp/state/react";
 import { useWorkoutHistory } from "../../hooks/use-workout-session";
 import { workoutDays$ } from "../../utils/supabase";
+import { Colors } from "../../constants/colors";
 
 const HistoryScreen = observer(() => {
   const sessions = useWorkoutHistory();
@@ -51,7 +52,7 @@ export default HistoryScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
     padding: 24,
   },
   heading: {
@@ -66,11 +67,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: "#999",
+    color: Colors.textMuted,
     textAlign: "center",
   },
   card: {
-    backgroundColor: "#f8f8f8",
+    backgroundColor: Colors.surfaceLight,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -81,12 +82,12 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: 13,
-    color: "#666",
+    color: Colors.textSecondary,
     marginTop: 4,
   },
   notes: {
     fontSize: 13,
-    color: "#999",
+    color: Colors.textMuted,
     marginTop: 8,
     fontStyle: "italic",
   },

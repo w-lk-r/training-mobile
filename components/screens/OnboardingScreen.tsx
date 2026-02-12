@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { createProgramFromMaxes } from "../../services/program-generator";
 import type { MainLiftCategory } from "../../types/program";
+import { Colors } from "../../constants/colors";
 
 const LIFTS: { key: MainLiftCategory; label: string }[] = [
   { key: "squat", label: "Back Squat" },
@@ -103,7 +104,7 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
   },
   flex: {
     flex: 1,
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "#666",
+    color: Colors.textSecondary,
     marginBottom: 32,
     lineHeight: 20,
   },
@@ -136,7 +137,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    borderColor: "#ccc",
+    borderColor: Colors.border,
     borderWidth: 1,
     borderRadius: 8,
     padding: 16,
@@ -144,19 +145,19 @@ const styles = StyleSheet.create({
   },
   unit: {
     fontSize: 16,
-    color: "#666",
+    color: Colors.textSecondary,
     marginLeft: 12,
     width: 24,
   },
   button: {
-    backgroundColor: "#333",
+    backgroundColor: Colors.text,
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
     marginTop: 16,
   },
   buttonText: {
-    color: "#fff",
+    color: Colors.background,
     fontSize: 16,
     fontWeight: "600",
   },

@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Colors } from "../../constants/colors";
 
 interface ProgramTypeOption {
   type: string;
@@ -73,7 +74,7 @@ export default function ProgramTypeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
   },
   scroll: {
     padding: 24,
@@ -85,14 +86,14 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "#666",
+    color: Colors.textSecondary,
     marginBottom: 32,
     lineHeight: 20,
   },
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f8f8",
+    backgroundColor: Colors.surfaceLight,
     borderRadius: 12,
     padding: 20,
     marginBottom: 12,
@@ -107,17 +108,17 @@ const styles = StyleSheet.create({
   },
   cardDescription: {
     fontSize: 13,
-    color: "#666",
+    color: Colors.textSecondary,
     lineHeight: 18,
     marginBottom: 4,
   },
   cardDetail: {
     fontSize: 12,
-    color: "#999",
+    color: Colors.textMuted,
   },
   chevron: {
     fontSize: 28,
-    color: "#ccc",
+    color: Colors.border,
     marginLeft: 12,
   },
 });

@@ -18,6 +18,7 @@ import { useExercises } from "../../hooks/use-exercises";
 import { useWorkoutSession } from "../../hooks/use-workout-session";
 import { addExercise, addSessionWorkoutDay } from "../../utils/supabase";
 import type { Tables } from "../../utils/database.types";
+import { Colors } from "../../constants/colors";
 
 type WorkoutDayWithProgram = Tables<"workout_days"> & {
   programName: string;
@@ -432,7 +433,7 @@ export default WorkoutComposerScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
   },
   scroll: {
     padding: 24,
@@ -445,7 +446,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "#666",
+    color: Colors.textSecondary,
     marginBottom: 24,
     lineHeight: 20,
   },
@@ -457,13 +458,13 @@ const styles = StyleSheet.create({
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: "#888",
+    color: Colors.textMuted,
     marginBottom: 12,
   },
   templateCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f0ff",
+    backgroundColor: Colors.highlight,
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
   },
   chevron: {
     fontSize: 24,
-    color: "#999",
+    color: Colors.textMuted,
   },
   programGroup: {
     marginBottom: 20,
@@ -483,36 +484,36 @@ const styles = StyleSheet.create({
   programLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#666",
+    color: Colors.textSecondary,
     marginBottom: 8,
   },
   dayRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f8f8",
+    backgroundColor: Colors.surfaceLight,
     borderRadius: 10,
     padding: 16,
     marginBottom: 6,
   },
   dayRowSelected: {
-    backgroundColor: "#e8f5e8",
+    backgroundColor: Colors.successLight,
   },
   checkbox: {
     width: 24,
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: "#ccc",
+    borderColor: Colors.border,
     marginRight: 12,
     justifyContent: "center",
     alignItems: "center",
   },
   checkboxChecked: {
-    backgroundColor: "#333",
-    borderColor: "#333",
+    backgroundColor: Colors.text,
+    borderColor: Colors.text,
   },
   checkmark: {
-    color: "#fff",
+    color: Colors.background,
     fontSize: 14,
     fontWeight: "bold",
   },
@@ -523,7 +524,7 @@ const styles = StyleSheet.create({
   },
   dayRowNumber: {
     fontSize: 13,
-    color: "#999",
+    color: Colors.textMuted,
   },
   emptyState: {
     alignItems: "center",
@@ -532,14 +533,14 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: "#999",
+    color: Colors.textMuted,
     textAlign: "center",
   },
   // Ad-hoc exercise styles
   adHocRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f8ff",
+    backgroundColor: Colors.highlight,
     borderRadius: 10,
     padding: 14,
     marginBottom: 6,
@@ -553,12 +554,12 @@ const styles = StyleSheet.create({
   },
   adHocCategory: {
     fontSize: 12,
-    color: "#888",
+    color: Colors.textMuted,
     marginTop: 2,
   },
   removeText: {
     fontSize: 18,
-    color: "#c00",
+    color: Colors.danger,
     paddingHorizontal: 8,
   },
   adHocButtons: {
@@ -568,7 +569,7 @@ const styles = StyleSheet.create({
   },
   adHocButton: {
     flex: 1,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: Colors.surface,
     borderRadius: 8,
     padding: 14,
     alignItems: "center",
@@ -576,17 +577,17 @@ const styles = StyleSheet.create({
   adHocButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color: Colors.text,
   },
   bottomActions: {
     marginTop: 24,
     borderTopWidth: 1,
-    borderTopColor: "#eee",
+    borderTopColor: Colors.borderLight,
     paddingTop: 16,
   },
   selectedCount: {
     fontSize: 14,
-    color: "#666",
+    color: Colors.textSecondary,
     marginBottom: 12,
   },
   buttonRow: {
@@ -595,7 +596,7 @@ const styles = StyleSheet.create({
   },
   reorderButton: {
     flex: 1,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: Colors.surface,
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
@@ -603,17 +604,17 @@ const styles = StyleSheet.create({
   reorderButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: Colors.text,
   },
   startButton: {
     flex: 1,
-    backgroundColor: "#333",
+    backgroundColor: Colors.text,
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
   },
   startButtonText: {
-    color: "#fff",
+    color: Colors.background,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -624,7 +625,7 @@ const styles = StyleSheet.create({
   reorderCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f8f8",
+    backgroundColor: Colors.surfaceLight,
     borderRadius: 10,
     padding: 16,
     marginBottom: 8,
@@ -638,7 +639,7 @@ const styles = StyleSheet.create({
   },
   reorderProgram: {
     fontSize: 12,
-    color: "#999",
+    color: Colors.textMuted,
     marginTop: 2,
   },
   reorderButtons: {
@@ -649,7 +650,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: Colors.borderLight,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -662,7 +663,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     flex: 1,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: Colors.surface,
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
@@ -670,12 +671,12 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: Colors.text,
   },
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
   },
   modalHeader: {
     flexDirection: "row",
@@ -683,7 +684,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: Colors.borderLight,
   },
   modalTitle: {
     fontSize: 20,
@@ -691,13 +692,13 @@ const styles = StyleSheet.create({
   },
   modalClose: {
     fontSize: 20,
-    color: "#666",
+    color: Colors.textSecondary,
     padding: 4,
   },
   searchInput: {
     margin: 16,
     padding: 12,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.surfaceLight,
     borderRadius: 8,
     fontSize: 16,
   },
@@ -706,7 +707,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: Colors.surface,
   },
   exercisePickerRowDisabled: {
     opacity: 0.4,
@@ -718,16 +719,16 @@ const styles = StyleSheet.create({
   },
   exercisePickerCategory: {
     fontSize: 13,
-    color: "#888",
+    color: Colors.textMuted,
     marginRight: 8,
   },
   exercisePickerAdded: {
     fontSize: 16,
-    color: "#2a7",
+    color: Colors.success,
   },
   emptySearch: {
     textAlign: "center",
-    color: "#999",
+    color: Colors.textMuted,
     padding: 24,
     fontSize: 14,
   },
@@ -737,13 +738,13 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#666",
+    color: Colors.textSecondary,
     marginBottom: 6,
     marginTop: 16,
   },
   formInput: {
     padding: 12,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.surfaceLight,
     borderRadius: 8,
     fontSize: 16,
   },

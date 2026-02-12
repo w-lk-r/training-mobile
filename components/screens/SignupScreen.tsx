@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Link } from "expo-router";
 import { useAuth } from "../../contexts/auth-context";
+import { Colors } from "../../constants/colors";
 
 export default function SignupScreen() {
   const { signUp } = useAuth();
@@ -71,7 +72,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     justifyContent: "center",
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
   },
   heading: {
     fontSize: 28,
@@ -81,12 +82,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "#666",
+    color: Colors.textSecondary,
     textAlign: "center",
     marginBottom: 32,
   },
   input: {
-    borderColor: "#ccc",
+    borderColor: Colors.border,
     borderWidth: 1,
     borderRadius: 8,
     padding: 16,
@@ -94,7 +95,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
-    backgroundColor: "#333",
+    backgroundColor: Colors.text,
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: "#fff",
+    color: Colors.background,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   linkText: {
-    color: "#666",
+    color: Colors.textSecondary,
     fontSize: 14,
   },
 });

@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { useAuth } from "../../contexts/auth-context";
 import { useExercises, useMaxLifts } from "../../hooks/use-exercises";
 import { clearLocalCache } from "../../utils/supabase";
+import { Colors } from "../../constants/colors";
 
 const ProfileScreen = observer(() => {
   const { session, signOut } = useAuth();
@@ -108,7 +109,7 @@ export default ProfileScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
     padding: 24,
   },
   heading: {
@@ -123,7 +124,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 12,
-    color: "#333",
+    color: Colors.text,
   },
   email: {
     fontSize: 16,
@@ -131,24 +132,24 @@ const styles = StyleSheet.create({
   },
   syncStatus: {
     fontSize: 13,
-    color: "#2a7",
+    color: Colors.success,
     marginBottom: 12,
   },
   offlineText: {
     fontSize: 14,
-    color: "#666",
+    color: Colors.textSecondary,
     marginBottom: 16,
   },
   emptyText: {
     fontSize: 14,
-    color: "#999",
+    color: Colors.textMuted,
   },
   liftRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: Colors.surface,
   },
   liftName: {
     fontSize: 16,
@@ -158,29 +159,29 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   button: {
-    backgroundColor: "#333",
+    backgroundColor: Colors.text,
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
   },
   buttonText: {
-    color: "#fff",
+    color: Colors.background,
     fontSize: 16,
     fontWeight: "600",
   },
   buttonOutline: {
     backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: Colors.text,
   },
   buttonOutlineText: {
-    color: "#333",
+    color: Colors.text,
   },
   signOutButton: {
     paddingVertical: 8,
   },
   signOutText: {
-    color: "#c33",
+    color: Colors.danger,
     fontSize: 14,
   },
   clearCacheButton: {
@@ -189,7 +190,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   clearCacheText: {
-    color: "#c33",
+    color: Colors.danger,
     fontSize: 14,
   },
 });

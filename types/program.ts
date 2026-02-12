@@ -1,8 +1,8 @@
 /** A prescribed set within a workout day */
 export interface SetScheme {
   reps: number;
-  /** Percentage of 1RM, e.g. 0.70 = 70% */
-  percentage: number;
+  /** Percentage of 1RM, e.g. 0.70 = 70%. Null for accessory exercises. */
+  percentage: number | null;
   /** Optional RPE target */
   rpe?: number;
 }
@@ -106,7 +106,7 @@ export const WEEKLY_MAIN_LIFT_SCHEME: SetScheme[][] = [
 
 /** Accessory sets stay consistent across weeks: 3x10 */
 export const ACCESSORY_SCHEME: SetScheme[] = [
-  { reps: 10, percentage: 0 },
-  { reps: 10, percentage: 0 },
-  { reps: 10, percentage: 0 },
+  { reps: 10, percentage: null },
+  { reps: 10, percentage: null },
+  { reps: 10, percentage: null },
 ];

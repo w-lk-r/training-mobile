@@ -349,30 +349,36 @@ export function deleteProgram(programId: string) {
   // Soft-delete the program
   programs$[programId].deleted.set(true);
 
-  // Soft-delete associated weeks, days, and sets
+  // Collect week IDs for this program (single pass)
   const weeks = programWeeks$.get();
+  const weekIds = new Set<string>();
   if (weeks) {
     for (const week of Object.values(weeks)) {
       if (week && week.program_id === programId && !week.deleted) {
+        weekIds.add(week.id);
         programWeeks$[week.id].deleted.set(true);
+      }
+    }
+  }
 
-        const days = workoutDays$.get();
-        if (days) {
-          for (const day of Object.values(days)) {
-            if (day && day.program_week_id === week.id && !day.deleted) {
-              workoutDays$[day.id].deleted.set(true);
+  // Collect day IDs for those weeks (single pass)
+  const days = workoutDays$.get();
+  const dayIds = new Set<string>();
+  if (days) {
+    for (const day of Object.values(days)) {
+      if (day && weekIds.has(day.program_week_id) && !day.deleted) {
+        dayIds.add(day.id);
+        workoutDays$[day.id].deleted.set(true);
+      }
+    }
+  }
 
-              const sets = workoutSets$.get();
-              if (sets) {
-                for (const set of Object.values(sets)) {
-                  if (set && set.workout_day_id === day.id && !set.deleted) {
-                    workoutSets$[set.id].deleted.set(true);
-                  }
-                }
-              }
-            }
-          }
-        }
+  // Soft-delete sets for those days (single pass)
+  const sets = workoutSets$.get();
+  if (sets) {
+    for (const set of Object.values(sets)) {
+      if (set && dayIds.has(set.workout_day_id) && !set.deleted) {
+        workoutSets$[set.id].deleted.set(true);
       }
     }
   }

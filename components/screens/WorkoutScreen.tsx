@@ -18,6 +18,7 @@ import {
 import { useExercises, useMaxLifts } from "../../hooks/use-exercises";
 import { useWorkoutSession } from "../../hooks/use-workout-session";
 import { addSessionWorkoutDay } from "../../utils/supabase";
+import { Colors } from "../../constants/colors";
 
 interface WorkoutScreenProps {
   dayIds?: string[];
@@ -427,7 +428,7 @@ export default WorkoutScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
   },
   scroll: {
     padding: 24,
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: "#999",
+    color: Colors.textMuted,
     textAlign: "center",
     paddingHorizontal: 24,
   },
@@ -449,18 +450,18 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   startButton: {
-    backgroundColor: "#333",
+    backgroundColor: Colors.text,
     borderRadius: 8,
     padding: 20,
     alignItems: "center",
   },
   startButtonText: {
-    color: "#fff",
+    color: Colors.background,
     fontSize: 18,
     fontWeight: "600",
   },
   exerciseCard: {
-    backgroundColor: "#f8f8f8",
+    backgroundColor: Colors.surfaceLight,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -472,25 +473,25 @@ const styles = StyleSheet.create({
   },
   adHocLabel: {
     fontSize: 12,
-    color: "#4a90d9",
+    color: Colors.primary,
     marginBottom: 8,
   },
   maxText: {
     fontSize: 13,
-    color: "#666",
+    color: Colors.textSecondary,
     marginBottom: 12,
   },
   setHeader: {
     flexDirection: "row",
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: Colors.borderLight,
     marginBottom: 4,
   },
   setHeaderText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#999",
+    color: Colors.textMuted,
     textTransform: "uppercase",
   },
   setCol: {
@@ -524,7 +525,7 @@ const styles = StyleSheet.create({
   setInput: {
     fontSize: 16,
     textAlign: "center",
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
     borderRadius: 6,
     paddingVertical: 8,
     marginHorizontal: 4,
@@ -533,12 +534,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#333",
+    backgroundColor: Colors.text,
     justifyContent: "center",
     alignItems: "center",
   },
   checkText: {
-    color: "#fff",
+    color: Colors.background,
     fontSize: 16,
   },
   doneCheck: {
@@ -548,23 +549,23 @@ const styles = StyleSheet.create({
     marginTop: 8,
     padding: 10,
     alignItems: "center",
-    backgroundColor: "#eee",
+    backgroundColor: Colors.borderLight,
     borderRadius: 6,
   },
   addSetText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#555",
+    color: Colors.textSecondary,
   },
   finishButton: {
-    backgroundColor: "#2a7",
+    backgroundColor: Colors.success,
     borderRadius: 8,
     padding: 20,
     alignItems: "center",
     marginTop: 8,
   },
   finishButtonText: {
-    color: "#fff",
+    color: Colors.background,
     fontSize: 18,
     fontWeight: "600",
   },

@@ -4,6 +4,7 @@ import { observer } from "@legendapp/state/react";
 import { router } from "expo-router";
 import { useAllPrograms } from "../../hooks/use-program";
 import { deleteProgram } from "../../utils/supabase";
+import { Colors } from "../../constants/colors";
 
 const PROGRAM_TYPE_LABELS: Record<string, string> = {
   powerlifting: "Powerlifting",
@@ -94,7 +95,7 @@ export default ProgramListScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
   },
   scroll: {
     padding: 24,
@@ -110,13 +111,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   addButton: {
-    backgroundColor: "#333",
+    backgroundColor: Colors.text,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   addButtonText: {
-    color: "#fff",
+    color: Colors.background,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -133,24 +134,24 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 14,
-    color: "#666",
+    color: Colors.textSecondary,
     textAlign: "center",
     marginBottom: 32,
     lineHeight: 20,
   },
   ctaButton: {
-    backgroundColor: "#333",
+    backgroundColor: Colors.text,
     borderRadius: 8,
     paddingHorizontal: 32,
     paddingVertical: 16,
   },
   ctaButtonText: {
-    color: "#fff",
+    color: Colors.background,
     fontSize: 16,
     fontWeight: "600",
   },
   card: {
-    backgroundColor: "#f8f8f8",
+    backgroundColor: Colors.surfaceLight,
     borderRadius: 12,
     padding: 20,
     marginBottom: 12,
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   typeBadge: {
-    backgroundColor: "#e8e8e8",
+    backgroundColor: Colors.borderLight,
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -176,10 +177,10 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     fontSize: 12,
     fontWeight: "500",
-    color: "#666",
+    color: Colors.textSecondary,
   },
   cardMeta: {
     fontSize: 13,
-    color: "#999",
+    color: Colors.textMuted,
   },
 });

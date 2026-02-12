@@ -1,4 +1,11 @@
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { observer } from "@legendapp/state/react";
 import { router } from "expo-router";
@@ -10,6 +17,7 @@ import {
   useWeekWorkouts,
 } from "../../hooks/use-program";
 import { setCurrentWeek, deleteProgram } from "../../utils/supabase";
+import { Colors } from "../../constants/colors";
 
 const HomeScreen = observer(() => {
   const program = useActiveProgram();
@@ -42,78 +50,80 @@ const HomeScreen = observer(() => {
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
-      <View style={styles.header}>
-        <Text style={styles.programName}>{program.name}</Text>
-        <Text style={styles.weekLabel}>
-          Week {currentWeek} of {weeksCount}
-        </Text>
-      </View>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.programName}>{program.name}</Text>
+          <Text style={styles.weekLabel}>
+            Week {currentWeek} of {weeksCount}
+          </Text>
+        </View>
 
-      <View style={styles.weekProgress}>
-        {Array.from({ length: weeksCount }, (_, i) => i + 1).map((w) => {
-          const weekDone = completedWeeks.has(w);
+        <View style={styles.weekProgress}>
+          {Array.from({ length: weeksCount }, (_, i) => i + 1).map((w) => {
+            const weekDone = completedWeeks.has(w);
+            return (
+              <TouchableOpacity
+                key={w}
+                style={[
+                  styles.weekDot,
+                  w === currentWeek && styles.weekDotActive,
+                ]}
+                onPress={() => setCurrentWeek(program.id, w)}
+              >
+                <Text
+                  style={[
+                    styles.weekDotText,
+                    w === currentWeek && styles.weekDotTextActive,
+                  ]}
+                >
+                  {weekDone ? "✓ " : ""}W{w}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text style={styles.sectionTitle}>This Week's Workouts</Text>
+
+        {weekWorkouts.map((day) => {
+          const isCompleted = completion.completedDayIds.has(day.id);
           return (
             <TouchableOpacity
-              key={w}
-              style={[
-                styles.weekDot,
-                w === currentWeek && styles.weekDotActive,
-              ]}
-              onPress={() => setCurrentWeek(program.id, w)}
+              key={day.id}
+              style={[styles.dayCard, isCompleted && styles.dayCardCompleted]}
+              onPress={() =>
+                router.push({
+                  pathname: "/(tabs)/workout",
+                  params: { dayId: day.id, dayName: day.name },
+                })
+              }
             >
-              <Text
-                style={[
-                  styles.weekDotText,
-                  w === currentWeek && styles.weekDotTextActive,
-                ]}
-              >
-                {weekDone ? "✓ " : ""}W{w}
-              </Text>
+              {isCompleted && <Text style={styles.checkmark}>✓</Text>}
+              <Text style={styles.dayName}>{day.name}</Text>
             </TouchableOpacity>
           );
         })}
-      </View>
 
-      <Text style={styles.sectionTitle}>This Week's Workouts</Text>
-
-      {weekWorkouts.map((day) => {
-        const isCompleted = completion.completedDayIds.has(day.id);
-        return (
-          <TouchableOpacity
-            key={day.id}
-            style={[styles.dayCard, isCompleted && styles.dayCardCompleted]}
-            onPress={() =>
-              router.push({
-                pathname: "/(tabs)/workout",
-                params: { dayId: day.id, dayName: day.name },
-              })
-            }
-          >
-            {isCompleted && <Text style={styles.checkmark}>✓</Text>}
-            <Text style={styles.dayName}>{day.name}</Text>
-          </TouchableOpacity>
-        );
-      })}
-
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() =>
-          Alert.alert(
-            "Delete Program",
-            "Are you sure you want to delete this program? This cannot be undone.",
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Delete",
-                style: "destructive",
-                onPress: () => deleteProgram(program.id),
-              },
-            ],
-          )
-        }
-      >
-        <Text style={styles.deleteButtonText}>Delete Program</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() =>
+            Alert.alert(
+              "Delete Program",
+              "Are you sure you want to delete this program? This cannot be undone.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: () => deleteProgram(program.id),
+                },
+              ],
+            )
+          }
+        >
+          <Text style={styles.deleteButtonText}>Delete Program</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 });
@@ -123,8 +133,11 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
+  },
+  scrollContent: {
     padding: 24,
+    paddingBottom: 48,
   },
   empty: {
     flex: 1,
@@ -138,19 +151,19 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 14,
-    color: "#666",
+    color: Colors.textSecondary,
     textAlign: "center",
     marginBottom: 32,
     lineHeight: 20,
   },
   button: {
-    backgroundColor: "#333",
+    backgroundColor: Colors.text,
     borderRadius: 8,
     paddingHorizontal: 32,
     paddingVertical: 16,
   },
   buttonText: {
-    color: "#fff",
+    color: Colors.background,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -163,7 +176,7 @@ const styles = StyleSheet.create({
   },
   weekLabel: {
     fontSize: 14,
-    color: "#666",
+    color: Colors.textSecondary,
     marginTop: 4,
   },
   weekProgress: {
@@ -175,19 +188,19 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: Colors.surface,
     alignItems: "center",
   },
   weekDotActive: {
-    backgroundColor: "#333",
+    backgroundColor: Colors.text,
   },
   weekDotText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#999",
+    color: Colors.textMuted,
   },
   weekDotTextActive: {
-    color: "#fff",
+    color: Colors.background,
   },
   sectionTitle: {
     fontSize: 18,
@@ -198,20 +211,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f8f8f8",
+    backgroundColor: Colors.surfaceLight,
     borderRadius: 12,
     padding: 20,
     marginBottom: 12,
   },
   dayCardCompleted: {
-    backgroundColor: "#f0f8f0",
+    backgroundColor: Colors.successLight,
   },
   checkmark: {
     position: "absolute",
     left: 20,
     fontSize: 16,
     fontWeight: "bold",
-    color: "#4a4",
+    color: Colors.successText,
   },
   dayName: {
     fontSize: 16,
@@ -219,10 +232,10 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     alignSelf: "center",
-    marginTop: 24,
+    marginTop: 40,
   },
   deleteButtonText: {
-    color: "#c33",
+    color: Colors.danger,
     fontSize: 14,
   },
 });
