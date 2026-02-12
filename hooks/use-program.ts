@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useSelector } from "@legendapp/state/react";
 import {
   setCurrentWeek,
@@ -225,15 +225,20 @@ export function useWorkoutTemplates(): Tables<"workout_templates">[] {
 /** Returns template items for a given template, sorted by sort_order */
 export function useTemplateItems(
   templateId: string | undefined,
-): Tables<"template_items">[] {
+): (Tables<"template_items"> & { exerciseName: string })[] {
   return useSelector(() => {
     if (!templateId) return [];
     const data = templateItems$.get();
     if (!data) return [];
+    const exData = exercises$.get();
     return Object.values(data)
       .filter(
         (i) => i && !i.deleted && i.template_id === templateId,
       )
+      .map((i) => ({
+        ...i,
+        exerciseName: exData?.[i.exercise_id]?.name ?? "Unknown",
+      }))
       .sort((a, b) => a.sort_order - b.sort_order);
   });
 }
@@ -348,7 +353,7 @@ export function useCompletedWeeks(
     const sessions = workoutSessions$.get();
     if (!weeks || !days) return result;
 
-    // Build set of all completed day IDs
+    // Build set of all completed day IDs (single pass)
     const completedDayIds = new Set<string>();
     if (sessions) {
       for (const session of Object.values(sessions)) {
@@ -358,15 +363,24 @@ export function useCompletedWeeks(
       }
     }
 
-    // Check each week
+    // Build daysByWeekId map (single pass over days) to avoid O(W*D)
+    const daysByWeekId = new Map<string, string[]>();
+    for (const day of Object.values(days)) {
+      if (!day || day.deleted) continue;
+      const list = daysByWeekId.get(day.program_week_id);
+      if (list) {
+        list.push(day.id);
+      } else {
+        daysByWeekId.set(day.program_week_id, [day.id]);
+      }
+    }
+
+    // Check each week using the pre-built map
     for (const week of Object.values(weeks)) {
       if (!week || week.deleted || week.program_id !== programId) continue;
 
-      const weekDays = Object.values(days).filter(
-        (d) => d && !d.deleted && d.program_week_id === week.id,
-      );
-
-      if (weekDays.length > 0 && weekDays.every((d) => completedDayIds.has(d.id))) {
+      const weekDayIds = daysByWeekId.get(week.id);
+      if (weekDayIds && weekDayIds.length > 0 && weekDayIds.every((id) => completedDayIds.has(id))) {
         result.add(week.week_number);
       }
     }
@@ -375,26 +389,42 @@ export function useCompletedWeeks(
   });
 }
 
+/** Returns a map of workout day ID to day name for the given IDs */
+export function useWorkoutDayNames(dayIds: string[]): Map<string, string> {
+  return useSelector(() => {
+    const map = new Map<string, string>();
+    if (dayIds.length === 0) return map;
+    const days = workoutDays$.get();
+    if (!days) return map;
+    for (const id of dayIds) {
+      const day = days[id];
+      if (day && !day.deleted) {
+        map.set(id, day.name ?? "Workout");
+      }
+    }
+    return map;
+  });
+}
+
 /** Auto-advances the week when all days are complete */
 export function useAutoAdvanceWeek(program: Tables<"programs"> | null) {
   const currentWeek = program?.current_week ?? 1;
   const weeksCount = program?.weeks_count ?? 4;
   const completion = useWeekCompletion(program?.id, currentWeek);
-  const lastAdvancedWeek = useRef(currentWeek);
+  const advancedRef = useRef<Set<string>>(new Set());
 
-  useEffect(() => {
-    lastAdvancedWeek.current = currentWeek;
-  }, [currentWeek]);
+  const advanceKey = program ? `${program.id}-${currentWeek}` : "";
 
   useEffect(() => {
     if (
       program &&
+      advanceKey &&
       completion.allComplete &&
       currentWeek < weeksCount &&
-      lastAdvancedWeek.current === currentWeek
+      !advancedRef.current.has(advanceKey)
     ) {
-      lastAdvancedWeek.current = currentWeek + 1;
+      advancedRef.current.add(advanceKey);
       setCurrentWeek(program.id, currentWeek + 1);
     }
-  }, [program, completion.allComplete, currentWeek, weeksCount]);
+  }, [program, advanceKey, completion.allComplete, currentWeek, weeksCount]);
 }

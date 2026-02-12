@@ -16,7 +16,7 @@ import {
 } from "../../hooks/use-program";
 import { useExercises } from "../../hooks/use-exercises";
 import { useWorkoutSession } from "../../hooks/use-workout-session";
-import { addExercise, addSessionWorkoutDay } from "../../utils/supabase";
+import { addExercise, addSessionWorkoutDay, templateItems$ } from "../../utils/supabase";
 import type { Tables } from "../../utils/database.types";
 import { Colors } from "../../constants/colors";
 
@@ -66,12 +66,16 @@ const WorkoutComposerScreen = observer(() => {
     });
   };
 
+  // Use Maps for O(1) lookups instead of .find() per item
+  const allDaysMap = new Map(allDays.map((d) => [d.id, d]));
+  const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
+
   const selectedDays = selectedDayIds
-    .map((id) => allDays.find((d) => d.id === id))
+    .map((id) => allDaysMap.get(id))
     .filter(Boolean) as WorkoutDayWithProgram[];
 
   const selectedAdHocExercises = adHocExerciseIds
-    .map((id) => exercises.find((e) => e.id === id))
+    .map((id) => exerciseMap.get(id))
     .filter(Boolean) as Tables<"exercises">[];
 
   const handleStart = () => {
@@ -79,16 +83,44 @@ const WorkoutComposerScreen = observer(() => {
       selectedDayIds.length > 0 ? selectedDayIds : ["adhoc"],
       adHocExerciseIds,
     );
-    // Link workout days to session
-    if (selectedDayIds.length > 1) {
-      selectedDayIds.forEach((dayId, index) => {
-        addSessionWorkoutDay(sessionId, dayId, index);
-      });
-    }
+    // Link all workout days to this session (including single-day)
+    selectedDayIds.forEach((dayId, index) => {
+      addSessionWorkoutDay(sessionId, dayId, index);
+    });
   };
 
   const handleStartFromTemplate = (templateId: string) => {
-    // TODO: resolve template into day IDs and start
+    // Read template items directly from the observable
+    const allItems = templateItems$.get();
+    if (!allItems) return;
+
+    const items = Object.values(allItems).filter(
+      (i) => i && !i.deleted && i.template_id === templateId,
+    );
+    if (items.length === 0) return;
+
+    // Collect workout day IDs and ad-hoc exercise IDs from template items
+    const dayIdSet = new Set<string>();
+    const exerciseIdSet = new Set<string>();
+
+    for (const item of items) {
+      if (item.workout_day_id) {
+        dayIdSet.add(item.workout_day_id);
+      } else {
+        exerciseIdSet.add(item.exercise_id);
+      }
+    }
+
+    const dayIds = Array.from(dayIdSet);
+    const exIds = Array.from(exerciseIdSet);
+
+    const sessionId = startSession(
+      dayIds.length > 0 ? dayIds : ["adhoc"],
+      exIds,
+    );
+    dayIds.forEach((dayId, index) => {
+      addSessionWorkoutDay(sessionId, dayId, index);
+    });
   };
 
   const handlePickExercise = (exerciseId: string) => {

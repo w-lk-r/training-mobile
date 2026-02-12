@@ -1,5 +1,5 @@
 import {
-  Alert,
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,10 +16,12 @@ import {
   useWeekCompletion,
   useWeekWorkouts,
 } from "../../hooks/use-program";
-import { setCurrentWeek, deleteProgram } from "../../utils/supabase";
+import { setCurrentWeek } from "../../utils/supabase";
+import { useAuth } from "../../contexts/auth-context";
 import { Colors } from "../../constants/colors";
 
 const HomeScreen = observer(() => {
+  const { isLoading } = useAuth();
   const program = useActiveProgram();
   const currentWeek = program?.current_week ?? 1;
   const weeksCount = program?.weeks_count ?? 4;
@@ -28,6 +30,16 @@ const HomeScreen = observer(() => {
   const completedWeeks = useCompletedWeeks(program?.id, weeksCount);
 
   useAutoAdvanceWeek(program);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["bottom"]}>
+        <View style={styles.empty}>
+          <ActivityIndicator size="large" color={Colors.textMuted} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!program) {
     return (
@@ -104,25 +116,6 @@ const HomeScreen = observer(() => {
           );
         })}
 
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() =>
-            Alert.alert(
-              "Delete Program",
-              "Are you sure you want to delete this program? This cannot be undone.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Delete",
-                  style: "destructive",
-                  onPress: () => deleteProgram(program.id),
-                },
-              ],
-            )
-          }
-        >
-          <Text style={styles.deleteButtonText}>Delete Program</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -229,13 +222,5 @@ const styles = StyleSheet.create({
   dayName: {
     fontSize: 16,
     fontWeight: "600",
-  },
-  deleteButton: {
-    alignSelf: "center",
-    marginTop: 40,
-  },
-  deleteButtonText: {
-    color: Colors.danger,
-    fontSize: 14,
   },
 });
