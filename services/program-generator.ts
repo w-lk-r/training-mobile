@@ -29,7 +29,7 @@ export function seedDefaultExercises(): ExerciseIdMap {
   const existingByName: Record<string, string> = {};
 
   if (existing) {
-    Object.values(existing).forEach((ex: any) => {
+    Object.values(existing).forEach((ex) => {
       if (ex && !ex.deleted) {
         existingByName[ex.name] = ex.id;
       }

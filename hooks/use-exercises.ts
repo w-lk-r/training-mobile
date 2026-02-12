@@ -1,14 +1,13 @@
 import { useSelector } from "@legendapp/state/react";
 import { exercises$, maxLifts$ } from "../utils/supabase";
-import type { Tables } from "../utils/database.types";
 
 export function useExercises() {
   const exercises = useSelector(() => {
     const data = exercises$.get();
     if (!data) return [];
     return Object.values(data).filter(
-      (e: any) => e && !e.deleted,
-    ) as Tables<"exercises">[];
+      (e) => e && !e.deleted,
+    );
   });
 
   return exercises;
@@ -21,9 +20,10 @@ export function useMaxLifts(): Record<string, number> {
     if (!data) return {};
 
     const map: Record<string, { weight: number; date: string }> = {};
-    Object.values(data).forEach((lift: any) => {
+    Object.values(data).forEach((lift) => {
       if (!lift || lift.deleted) return;
       const existing = map[lift.exercise_id];
+      if (!lift.date_recorded) return;
       if (!existing || lift.date_recorded > existing.date) {
         map[lift.exercise_id] = {
           weight: lift.weight_kg,

@@ -8,7 +8,6 @@ import {
   activeSessionDayIds$,
   activeAdHocExerciseIds$,
 } from "../utils/supabase";
-import type { Tables } from "../utils/database.types";
 
 export function useWorkoutSession() {
   const sessionId = useSelector(() => activeSessionId$.get());
@@ -72,12 +71,12 @@ export function useWorkoutHistory() {
     return (
       Object.values(data)
         .filter(
-          (s: any) => s && !s.deleted && s.completed_at != null,
-        ) as Tables<"workout_sessions">[]
+          (s) => s && !s.deleted && s.completed_at != null,
+        )
     ).sort(
       (a, b) =>
-        new Date(b.completed_at!).getTime() -
-        new Date(a.completed_at!).getTime(),
+        new Date(b.completed_at ?? 0).getTime() -
+        new Date(a.completed_at ?? 0).getTime(),
     );
   });
 }
@@ -93,12 +92,12 @@ export function useSessionLogs(sessionId: string | undefined) {
     return (
       Object.values(data)
         .filter(
-          (l: any) =>
+          (l) =>
             l && !l.deleted && l.workout_session_id === sessionId,
-        ) as Tables<"set_logs">[]
+        )
     ).sort(
       (a, b) =>
-        new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime(),
+        new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime(),
     );
   });
 }

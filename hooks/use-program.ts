@@ -20,11 +20,11 @@ export function useActiveProgram(): Tables<"programs"> | null {
     if (!data) return null;
 
     const active = Object.values(data)
-      .filter((p: any) => p && !p.deleted)
+      .filter((p) => p && !p.deleted)
       .sort(
-        (a: any, b: any) =>
-          new Date(b.start_date).getTime() - new Date(a.start_date).getTime(),
-      ) as Tables<"programs">[];
+        (a, b) =>
+          new Date(b.start_date ?? 0).getTime() - new Date(a.start_date ?? 0).getTime(),
+      );
 
     return active[0] ?? null;
   });
@@ -42,24 +42,23 @@ export function useWeekWorkouts(
     if (!weeks) return [];
 
     const week = Object.values(weeks).find(
-      (w: any) =>
+      (w) =>
         w &&
         !w.deleted &&
         w.program_id === programId &&
         w.week_number === weekNumber,
-    ) as Tables<"program_weeks"> | undefined;
+    );
 
     if (!week) return [];
 
     const days = workoutDays$.get();
     if (!days) return [];
 
-    return (
-      Object.values(days)
-        .filter(
-          (d: any) => d && !d.deleted && d.program_week_id === week.id,
-        ) as Tables<"workout_days">[]
-    ).sort((a, b) => a.day_number - b.day_number);
+    return Object.values(days)
+      .filter(
+        (d) => d && !d.deleted && d.program_week_id === week.id,
+      )
+      .sort((a, b) => a.day_number - b.day_number);
   });
 }
 
@@ -80,13 +79,13 @@ export function useWorkoutDaySets(workoutDayId: string | undefined) {
 
     const daySets = Object.values(sets)
       .filter(
-        (s: any) => s && !s.deleted && s.workout_day_id === workoutDayId,
+        (s) => s && !s.deleted && s.workout_day_id === workoutDayId,
       )
-      .map((s: any) => ({
+      .map((s) => ({
         ...s,
         exercise_name:
           exData?.[s.exercise_id]?.name ?? "Unknown",
-      })) as WorkoutSetWithExercise[];
+      }));
 
     return daySets.sort((a, b) => a.set_number - b.set_number);
   });
@@ -111,8 +110,8 @@ export function useWorkoutDayExercises(
     const exData = exercises$.get();
 
     const daySets = Object.values(sets).filter(
-      (s: any) => s && !s.deleted && s.workout_day_id === workoutDayId,
-    ) as Tables<"workout_sets">[];
+      (s) => s && !s.deleted && s.workout_day_id === workoutDayId,
+    );
 
     // Group by exercise, preserving order
     const groups: Record<string, ExerciseGroup> = {};
@@ -141,13 +140,12 @@ export function useAllPrograms(): Tables<"programs">[] {
   return useSelector(() => {
     const data = programs$.get();
     if (!data) return [];
-    return (
-      Object.values(data)
-        .filter((p: any) => p && !p.deleted) as Tables<"programs">[]
-    ).sort(
-      (a, b) =>
-        new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime(),
-    );
+    return Object.values(data)
+      .filter((p) => p && !p.deleted)
+      .sort(
+        (a, b) =>
+          new Date(b.start_date ?? 0).getTime() - new Date(a.start_date ?? 0).getTime(),
+      );
   });
 }
 
@@ -165,9 +163,9 @@ export function useAllCurrentWorkoutDays(): (Tables<"workout_days"> & {
 
     // Build a map of current week IDs per program
     const currentWeekIds: Record<string, { weekId: string; weekNumber: number; programName: string; programId: string }> = {};
-    for (const prog of Object.values(progs) as any[]) {
+    for (const prog of Object.values(progs)) {
       if (!prog || prog.deleted) continue;
-      for (const week of Object.values(weeks) as any[]) {
+      for (const week of Object.values(weeks)) {
         if (
           week &&
           !week.deleted &&
@@ -190,7 +188,7 @@ export function useAllCurrentWorkoutDays(): (Tables<"workout_days"> & {
       weekNumber: number;
     })[] = [];
 
-    for (const day of Object.values(days) as any[]) {
+    for (const day of Object.values(days)) {
       if (!day || day.deleted) continue;
       const weekInfo = currentWeekIds[day.program_week_id];
       if (weekInfo) {
@@ -215,13 +213,12 @@ export function useWorkoutTemplates(): Tables<"workout_templates">[] {
   return useSelector(() => {
     const data = workoutTemplates$.get();
     if (!data) return [];
-    return (
-      Object.values(data)
-        .filter((t: any) => t && !t.deleted) as Tables<"workout_templates">[]
-    ).sort(
-      (a, b) =>
-        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime(),
-    );
+    return Object.values(data)
+      .filter((t) => t && !t.deleted)
+      .sort(
+        (a, b) =>
+          new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime(),
+      );
   });
 }
 
@@ -233,12 +230,11 @@ export function useTemplateItems(
     if (!templateId) return [];
     const data = templateItems$.get();
     if (!data) return [];
-    return (
-      Object.values(data)
-        .filter(
-          (i: any) => i && !i.deleted && i.template_id === templateId,
-        ) as Tables<"template_items">[]
-    ).sort((a, b) => a.sort_order - b.sort_order);
+    return Object.values(data)
+      .filter(
+        (i) => i && !i.deleted && i.template_id === templateId,
+      )
+      .sort((a, b) => a.sort_order - b.sort_order);
   });
 }
 
@@ -256,8 +252,8 @@ export function useMultiDayExercises(
     const dayIdSet = new Set(workoutDayIds);
 
     const allSets = Object.values(sets).filter(
-      (s: any) => s && !s.deleted && dayIdSet.has(s.workout_day_id),
-    ) as Tables<"workout_sets">[];
+      (s) => s && !s.deleted && dayIdSet.has(s.workout_day_id),
+    );
 
     const groups: Record<string, ExerciseGroup> = {};
     const order: string[] = [];
@@ -293,17 +289,17 @@ export function useWeekCompletion(
     if (!weeks) return empty;
 
     const week = Object.values(weeks).find(
-      (w: any) =>
+      (w) =>
         w && !w.deleted && w.program_id === programId && w.week_number === weekNumber,
-    ) as Tables<"program_weeks"> | undefined;
+    );
     if (!week) return empty;
 
     const days = workoutDays$.get();
     if (!days) return empty;
 
     const weekDays = Object.values(days).filter(
-      (d: any) => d && !d.deleted && d.program_week_id === week.id,
-    ) as Tables<"workout_days">[];
+      (d) => d && !d.deleted && d.program_week_id === week.id,
+    );
 
     if (weekDays.length === 0) return empty;
 
@@ -311,7 +307,7 @@ export function useWeekCompletion(
     const completedDayIds = new Set<string>();
 
     if (sessions) {
-      for (const session of Object.values(sessions) as any[]) {
+      for (const session of Object.values(sessions)) {
         if (
           session &&
           !session.deleted &&
@@ -355,7 +351,7 @@ export function useCompletedWeeks(
     // Build set of all completed day IDs
     const completedDayIds = new Set<string>();
     if (sessions) {
-      for (const session of Object.values(sessions) as any[]) {
+      for (const session of Object.values(sessions)) {
         if (session && !session.deleted && session.completed_at && session.workout_day_id) {
           completedDayIds.add(session.workout_day_id);
         }
@@ -363,12 +359,12 @@ export function useCompletedWeeks(
     }
 
     // Check each week
-    for (const week of Object.values(weeks) as any[]) {
+    for (const week of Object.values(weeks)) {
       if (!week || week.deleted || week.program_id !== programId) continue;
 
       const weekDays = Object.values(days).filter(
-        (d: any) => d && !d.deleted && d.program_week_id === week.id,
-      ) as Tables<"workout_days">[];
+        (d) => d && !d.deleted && d.program_week_id === week.id,
+      );
 
       if (weekDays.length > 0 && weekDays.every((d) => completedDayIds.has(d.id))) {
         result.add(week.week_number);

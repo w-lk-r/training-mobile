@@ -352,19 +352,19 @@ export function deleteProgram(programId: string) {
   // Soft-delete associated weeks, days, and sets
   const weeks = programWeeks$.get();
   if (weeks) {
-    for (const week of Object.values(weeks) as any[]) {
+    for (const week of Object.values(weeks)) {
       if (week && week.program_id === programId && !week.deleted) {
         programWeeks$[week.id].deleted.set(true);
 
         const days = workoutDays$.get();
         if (days) {
-          for (const day of Object.values(days) as any[]) {
+          for (const day of Object.values(days)) {
             if (day && day.program_week_id === week.id && !day.deleted) {
               workoutDays$[day.id].deleted.set(true);
 
               const sets = workoutSets$.get();
               if (sets) {
-                for (const set of Object.values(sets) as any[]) {
+                for (const set of Object.values(sets)) {
                   if (set && set.workout_day_id === day.id && !set.deleted) {
                     workoutSets$[set.id].deleted.set(true);
                   }
@@ -443,7 +443,7 @@ export function deleteTemplate(templateId: string) {
   workoutTemplates$[templateId].deleted.set(true);
   const items = templateItems$.get();
   if (items) {
-    for (const item of Object.values(items) as any[]) {
+    for (const item of Object.values(items)) {
       if (item && item.template_id === templateId && !item.deleted) {
         templateItems$[item.id].deleted.set(true);
       }
@@ -452,7 +452,7 @@ export function deleteTemplate(templateId: string) {
 }
 
 export function setCurrentWeek(programId: string, week: number) {
-  const program = programs$[programId].get() as any;
+  const program = programs$[programId].get();
   if (!program || program.deleted) return;
   const total = program.weeks_count ?? 4;
   if (week >= 1 && week <= total) {
