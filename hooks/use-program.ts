@@ -8,6 +8,7 @@ import {
   workoutDays$,
   workoutSets$,
   workoutSessions$,
+  sessionWorkoutDays$,
   workoutTemplates$,
   templateItems$,
 } from "../utils/supabase";
@@ -309,17 +310,24 @@ export function useWeekCompletion(
     if (weekDays.length === 0) return empty;
 
     const sessions = workoutSessions$.get();
-    const completedDayIds = new Set<string>();
+    const swd = sessionWorkoutDays$.get();
 
+    // Build set of completed session IDs
+    const completedSessionIds = new Set<string>();
     if (sessions) {
       for (const session of Object.values(sessions)) {
-        if (
-          session &&
-          !session.deleted &&
-          session.completed_at &&
-          session.workout_day_id
-        ) {
-          completedDayIds.add(session.workout_day_id);
+        if (session && !session.deleted && session.completed_at) {
+          completedSessionIds.add(session.id);
+        }
+      }
+    }
+
+    // Resolve completed day IDs via session_workout_days junction
+    const completedDayIds = new Set<string>();
+    if (swd) {
+      for (const link of Object.values(swd)) {
+        if (link && !link.deleted && completedSessionIds.has(link.session_id)) {
+          completedDayIds.add(link.workout_day_id);
         }
       }
     }
@@ -351,14 +359,25 @@ export function useCompletedWeeks(
     const weeks = programWeeks$.get();
     const days = workoutDays$.get();
     const sessions = workoutSessions$.get();
+    const swd = sessionWorkoutDays$.get();
     if (!weeks || !days) return result;
 
-    // Build set of all completed day IDs (single pass)
-    const completedDayIds = new Set<string>();
+    // Build set of completed session IDs (single pass)
+    const completedSessionIds = new Set<string>();
     if (sessions) {
       for (const session of Object.values(sessions)) {
-        if (session && !session.deleted && session.completed_at && session.workout_day_id) {
-          completedDayIds.add(session.workout_day_id);
+        if (session && !session.deleted && session.completed_at) {
+          completedSessionIds.add(session.id);
+        }
+      }
+    }
+
+    // Resolve completed day IDs via session_workout_days junction
+    const completedDayIds = new Set<string>();
+    if (swd) {
+      for (const link of Object.values(swd)) {
+        if (link && !link.deleted && completedSessionIds.has(link.session_id)) {
+          completedDayIds.add(link.workout_day_id);
         }
       }
     }

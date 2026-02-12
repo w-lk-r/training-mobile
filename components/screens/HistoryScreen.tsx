@@ -9,21 +9,36 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { observer } from "@legendapp/state/react";
+import { observer, useSelector } from "@legendapp/state/react";
 import { useWorkoutHistory, useSessionLogs } from "../../hooks/use-workout-session";
 import { useWorkoutDayNames } from "../../hooks/use-program";
 import { useExercises } from "../../hooks/use-exercises";
+import { sessionWorkoutDays$ } from "../../utils/supabase";
 import { Colors } from "../../constants/colors";
 
 const HistoryScreen = observer(() => {
   const sessions = useWorkoutHistory();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
-  // Collect all unique workout_day_ids so we can resolve names via a single selector
-  const dayIds = sessions
-    .map((s) => s.workout_day_id)
-    .filter((id): id is string => id != null);
-  const dayNames = useWorkoutDayNames(dayIds);
+  // Build session -> day IDs map from junction table, then resolve day names
+  const sessionDayMap = useSelector(() => {
+    const swd = sessionWorkoutDays$.get();
+    const map = new Map<string, string[]>();
+    if (!swd) return map;
+    for (const link of Object.values(swd)) {
+      if (link && !link.deleted) {
+        const list = map.get(link.session_id);
+        if (list) list.push(link.workout_day_id);
+        else map.set(link.session_id, [link.workout_day_id]);
+      }
+    }
+    return map;
+  });
+
+  const allDayIds = Array.from(
+    new Set(Array.from(sessionDayMap.values()).flat()),
+  );
+  const dayNames = useWorkoutDayNames(allDayIds);
 
   const selectedSession = selectedSessionId
     ? sessions.find((s) => s.id === selectedSessionId)
@@ -42,8 +57,9 @@ const HistoryScreen = observer(() => {
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {sessions.map((session) => {
-            const dayName = session.workout_day_id
-              ? dayNames.get(session.workout_day_id) ?? "Workout"
+            const linkedDayIds = sessionDayMap.get(session.id);
+            const dayName = linkedDayIds?.length
+              ? linkedDayIds.map((id) => dayNames.get(id) ?? "Workout").join(" + ")
               : "Workout";
 
             return (
@@ -77,9 +93,12 @@ const HistoryScreen = observer(() => {
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {selectedSession?.workout_day_id
-                ? dayNames.get(selectedSession.workout_day_id) ?? "Workout"
-                : "Workout"}
+              {(() => {
+                const ids = selectedSession ? sessionDayMap.get(selectedSession.id) : undefined;
+                return ids?.length
+                  ? ids.map((id) => dayNames.get(id) ?? "Workout").join(" + ")
+                  : "Workout";
+              })()}
             </Text>
             <TouchableOpacity onPress={() => setSelectedSessionId(null)}>
               <Text style={styles.modalClose}>{"\u2715"}</Text>

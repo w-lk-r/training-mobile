@@ -417,7 +417,6 @@ export type Database = {
           notes: string | null
           updated_at: string | null
           user_id: string
-          workout_day_id: string | null
         }
         Insert: {
           completed_at?: string | null
@@ -427,7 +426,6 @@ export type Database = {
           notes?: string | null
           updated_at?: string | null
           user_id: string
-          workout_day_id?: string | null
         }
         Update: {
           completed_at?: string | null
@@ -437,17 +435,8 @@ export type Database = {
           notes?: string | null
           updated_at?: string | null
           user_id?: string
-          workout_day_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "workout_sessions_workout_day_id_fkey"
-            columns: ["workout_day_id"]
-            isOneToOne: false
-            referencedRelation: "workout_days"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       workout_sets: {
         Row: {
