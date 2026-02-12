@@ -156,6 +156,7 @@ export type Database = {
           updated_at: string | null
           user_id: string
           weeks_count: number | null
+          wizard_config: Json | null
         }
         Insert: {
           created_at?: string | null
@@ -169,6 +170,7 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           weeks_count?: number | null
+          wizard_config?: Json | null
         }
         Update: {
           created_at?: string | null
@@ -182,6 +184,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           weeks_count?: number | null
+          wizard_config?: Json | null
         }
         Relationships: []
       }
@@ -201,7 +204,7 @@ export type Database = {
           deleted?: boolean | null
           id?: string
           session_id: string
-          sort_order: number
+          sort_order?: number
           updated_at?: string | null
           user_id: string
           workout_day_id: string
@@ -297,6 +300,73 @@ export type Database = {
           },
         ]
       }
+      template_items: {
+        Row: {
+          created_at: string | null
+          deleted: boolean | null
+          exercise_id: string
+          id: string
+          percentage_of_max: number | null
+          reps: number
+          rpe: number | null
+          sort_order: number
+          template_id: string
+          updated_at: string | null
+          user_id: string
+          workout_day_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deleted?: boolean | null
+          exercise_id: string
+          id?: string
+          percentage_of_max?: number | null
+          reps: number
+          rpe?: number | null
+          sort_order?: number
+          template_id: string
+          updated_at?: string | null
+          user_id: string
+          workout_day_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deleted?: boolean | null
+          exercise_id?: string
+          id?: string
+          percentage_of_max?: number | null
+          reps?: number
+          rpe?: number | null
+          sort_order?: number
+          template_id?: string
+          updated_at?: string | null
+          user_id?: string
+          workout_day_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_items_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workout_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_items_workout_day_id_fkey"
+            columns: ["workout_day_id"]
+            isOneToOne: false
+            referencedRelation: "workout_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_days: {
         Row: {
           created_at: string | null
@@ -379,93 +449,6 @@ export type Database = {
           },
         ]
       }
-      workout_templates: {
-        Row: {
-          created_at: string | null
-          deleted: boolean | null
-          id: string
-          name: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          deleted?: boolean | null
-          id?: string
-          name: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          deleted?: boolean | null
-          id?: string
-          name?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      template_items: {
-        Row: {
-          created_at: string | null
-          deleted: boolean | null
-          exercise_id: string
-          id: string
-          percentage_of_max: number | null
-          reps: number
-          rpe: number | null
-          sort_order: number
-          template_id: string
-          updated_at: string | null
-          user_id: string
-          workout_day_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          deleted?: boolean | null
-          exercise_id: string
-          id?: string
-          percentage_of_max?: number | null
-          reps: number
-          rpe?: number | null
-          sort_order: number
-          template_id: string
-          updated_at?: string | null
-          user_id: string
-          workout_day_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          deleted?: boolean | null
-          exercise_id?: string
-          id?: string
-          percentage_of_max?: number | null
-          reps?: number
-          rpe?: number | null
-          sort_order?: number
-          template_id?: string
-          updated_at?: string | null
-          user_id?: string
-          workout_day_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "template_items_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "workout_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "template_items_exercise_id_fkey"
-            columns: ["exercise_id"]
-            isOneToOne: false
-            referencedRelation: "exercises"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       workout_sets: {
         Row: {
           created_at: string | null
@@ -522,6 +505,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workout_templates: {
+        Row: {
+          created_at: string | null
+          deleted: boolean | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deleted?: boolean | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deleted?: boolean | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

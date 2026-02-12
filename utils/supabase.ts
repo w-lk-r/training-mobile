@@ -6,7 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
-import { Database } from "./database.types";
+import { Database, Json } from "./database.types";
 
 // ============================================================
 // Supabase Client
@@ -110,7 +110,8 @@ export const maxLifts$ = observable(
   }),
 );
 
-export const programs$ = observable(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Json type causes infinite type instantiation with Legend State
+export const programs$ = observable<Record<string, any>>(
   customSynced({
     supabase,
     collection: "programs",
@@ -281,10 +282,10 @@ export function addProgram(
   description?: string,
   weeksCount?: number,
   programType?: string,
-  wizardConfig?: object,
+  wizardConfig?: Json,
 ) {
   const id = generateId();
-  programs$[id].assign({
+  (programs$[id] as any).assign({
     id,
     user_id: getUserId(),
     name,
