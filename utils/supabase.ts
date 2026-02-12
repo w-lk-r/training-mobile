@@ -451,6 +451,15 @@ export function deleteTemplate(templateId: string) {
   }
 }
 
+export function setCurrentWeek(programId: string, week: number) {
+  const program = programs$[programId].get() as any;
+  if (!program || program.deleted) return;
+  const total = program.weeks_count ?? 4;
+  if (week >= 1 && week <= total) {
+    programs$[programId].current_week.set(week);
+  }
+}
+
 export function addSetLog(
   workoutSessionId: string,
   exerciseId: string,

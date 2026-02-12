@@ -3,8 +3,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { observer } from "@legendapp/state/react";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSelector } from "@legendapp/state/react";
-import { useWeekWorkouts } from "../../hooks/use-program";
-import { deleteProgram, programs$ } from "../../utils/supabase";
+import { useCompletedWeeks, useWeekCompletion, useWeekWorkouts } from "../../hooks/use-program";
+import { setCurrentWeek, deleteProgram, programs$ } from "../../utils/supabase";
 import type { Tables } from "../../utils/database.types";
 
 const ProgramDetailScreen = observer(() => {
@@ -17,10 +17,11 @@ const ProgramDetailScreen = observer(() => {
     return p as Tables<"programs">;
   });
 
-  const weekWorkouts = useWeekWorkouts(
-    program?.id,
-    program?.current_week ?? 1,
-  );
+  const currentWeek = program?.current_week ?? 1;
+  const weeksCount = program?.weeks_count ?? 4;
+  const weekWorkouts = useWeekWorkouts(program?.id, currentWeek);
+  const completion = useWeekCompletion(program?.id, currentWeek);
+  const completedWeeks = useCompletedWeeks(program?.id, weeksCount);
 
   if (!program) {
     return (
@@ -38,53 +39,55 @@ const ProgramDetailScreen = observer(() => {
         <View style={styles.header}>
           <Text style={styles.programName}>{program.name}</Text>
           <Text style={styles.weekLabel}>
-            Week {program.current_week} of {program.weeks_count}
+            Week {currentWeek} of {weeksCount}
           </Text>
         </View>
 
         <View style={styles.weekProgress}>
-          {Array.from({ length: program.weeks_count ?? 4 }, (_, i) => i + 1).map(
-            (w) => (
-              <View
+          {Array.from({ length: weeksCount }, (_, i) => i + 1).map((w) => {
+            const weekDone = completedWeeks.has(w);
+            return (
+              <TouchableOpacity
                 key={w}
                 style={[
                   styles.weekDot,
-                  w === program.current_week && styles.weekDotActive,
-                  w < (program.current_week ?? 1) && styles.weekDotDone,
+                  w === currentWeek && styles.weekDotActive,
                 ]}
+                onPress={() => setCurrentWeek(program.id, w)}
               >
                 <Text
                   style={[
                     styles.weekDotText,
-                    (w === program.current_week ||
-                      w < (program.current_week ?? 1)) &&
-                      styles.weekDotTextActive,
+                    w === currentWeek && styles.weekDotTextActive,
                   ]}
                 >
-                  W{w}
+                  {weekDone ? "✓ " : ""}W{w}
                 </Text>
-              </View>
-            ),
-          )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <Text style={styles.sectionTitle}>This Week's Workouts</Text>
 
-        {weekWorkouts.map((day) => (
-          <TouchableOpacity
-            key={day.id}
-            style={styles.dayCard}
-            onPress={() =>
-              router.push({
-                pathname: "/active-workout",
-                params: { dayId: day.id, dayName: day.name },
-              })
-            }
-          >
-            <Text style={styles.dayName}>{day.name}</Text>
-            <Text style={styles.dayNumber}>Day {day.day_number}</Text>
-          </TouchableOpacity>
-        ))}
+        {weekWorkouts.map((day) => {
+          const isCompleted = completion.completedDayIds.has(day.id);
+          return (
+            <TouchableOpacity
+              key={day.id}
+              style={[styles.dayCard, isCompleted && styles.dayCardCompleted]}
+              onPress={() =>
+                router.push({
+                  pathname: "/active-workout",
+                  params: { dayId: day.id, dayName: day.name },
+                })
+              }
+            >
+              {isCompleted && <Text style={styles.checkmark}>✓</Text>}
+              <Text style={styles.dayName}>{day.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
 
         <TouchableOpacity
           style={styles.deleteButton}
@@ -147,7 +150,7 @@ const styles = StyleSheet.create({
   weekProgress: {
     flexDirection: "row",
     gap: 8,
-    marginBottom: 32,
+    marginBottom: 16,
   },
   weekDot: {
     flex: 1,
@@ -158,9 +161,6 @@ const styles = StyleSheet.create({
   },
   weekDotActive: {
     backgroundColor: "#333",
-  },
-  weekDotDone: {
-    backgroundColor: "#dfd",
   },
   weekDotText: {
     fontSize: 13,
@@ -177,20 +177,26 @@ const styles = StyleSheet.create({
   },
   dayCard: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#f8f8f8",
     borderRadius: 12,
     padding: 20,
     marginBottom: 12,
   },
+  dayCardCompleted: {
+    backgroundColor: "#f0f8f0",
+  },
+  checkmark: {
+    position: "absolute",
+    left: 20,
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#4a4",
+  },
   dayName: {
     fontSize: 16,
     fontWeight: "600",
-  },
-  dayNumber: {
-    fontSize: 13,
-    color: "#999",
   },
   deleteButton: {
     alignSelf: "center",

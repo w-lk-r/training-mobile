@@ -1,10 +1,13 @@
+import { useEffect, useRef } from "react";
 import { useSelector } from "@legendapp/state/react";
 import {
+  setCurrentWeek,
   exercises$,
   programs$,
   programWeeks$,
   workoutDays$,
   workoutSets$,
+  workoutSessions$,
   workoutTemplates$,
   templateItems$,
 } from "../utils/supabase";
@@ -275,4 +278,127 @@ export function useMultiDayExercises(
 
     return order.map((id) => groups[id]);
   });
+}
+
+/** Returns completion status for each day in a given week */
+export function useWeekCompletion(
+  programId: string | undefined,
+  weekNumber: number,
+): { completedDayIds: Set<string>; totalDays: number; allComplete: boolean } {
+  return useSelector(() => {
+    const empty = { completedDayIds: new Set<string>(), totalDays: 0, allComplete: false };
+    if (!programId) return empty;
+
+    const weeks = programWeeks$.get();
+    if (!weeks) return empty;
+
+    const week = Object.values(weeks).find(
+      (w: any) =>
+        w && !w.deleted && w.program_id === programId && w.week_number === weekNumber,
+    ) as Tables<"program_weeks"> | undefined;
+    if (!week) return empty;
+
+    const days = workoutDays$.get();
+    if (!days) return empty;
+
+    const weekDays = Object.values(days).filter(
+      (d: any) => d && !d.deleted && d.program_week_id === week.id,
+    ) as Tables<"workout_days">[];
+
+    if (weekDays.length === 0) return empty;
+
+    const sessions = workoutSessions$.get();
+    const completedDayIds = new Set<string>();
+
+    if (sessions) {
+      for (const session of Object.values(sessions) as any[]) {
+        if (
+          session &&
+          !session.deleted &&
+          session.completed_at &&
+          session.workout_day_id
+        ) {
+          completedDayIds.add(session.workout_day_id);
+        }
+      }
+    }
+
+    // Only keep day IDs that belong to this week
+    const weekDayIds = new Set(weekDays.map((d) => d.id));
+    const relevantCompleted = new Set<string>();
+    for (const id of completedDayIds) {
+      if (weekDayIds.has(id)) relevantCompleted.add(id);
+    }
+
+    return {
+      completedDayIds: relevantCompleted,
+      totalDays: weekDays.length,
+      allComplete: relevantCompleted.size >= weekDays.length,
+    };
+  });
+}
+
+/** Returns a Set of week numbers where all days have completed sessions */
+export function useCompletedWeeks(
+  programId: string | undefined,
+  weeksCount: number,
+): Set<number> {
+  return useSelector(() => {
+    const result = new Set<number>();
+    if (!programId || weeksCount === 0) return result;
+
+    const weeks = programWeeks$.get();
+    const days = workoutDays$.get();
+    const sessions = workoutSessions$.get();
+    if (!weeks || !days) return result;
+
+    // Build set of all completed day IDs
+    const completedDayIds = new Set<string>();
+    if (sessions) {
+      for (const session of Object.values(sessions) as any[]) {
+        if (session && !session.deleted && session.completed_at && session.workout_day_id) {
+          completedDayIds.add(session.workout_day_id);
+        }
+      }
+    }
+
+    // Check each week
+    for (const week of Object.values(weeks) as any[]) {
+      if (!week || week.deleted || week.program_id !== programId) continue;
+
+      const weekDays = Object.values(days).filter(
+        (d: any) => d && !d.deleted && d.program_week_id === week.id,
+      ) as Tables<"workout_days">[];
+
+      if (weekDays.length > 0 && weekDays.every((d) => completedDayIds.has(d.id))) {
+        result.add(week.week_number);
+      }
+    }
+
+    return result;
+  });
+}
+
+/** Auto-advances the week when all days are complete */
+export function useAutoAdvanceWeek(program: Tables<"programs"> | null) {
+  const currentWeek = program?.current_week ?? 1;
+  const weeksCount = program?.weeks_count ?? 4;
+  const completion = useWeekCompletion(program?.id, currentWeek);
+  const lastAdvancedWeek = useRef(currentWeek);
+
+  useEffect(() => {
+    lastAdvancedWeek.current = currentWeek;
+  }, [currentWeek]);
+
+  useEffect(() => {
+    if (
+      program &&
+      completion.allComplete &&
+      currentWeek < weeksCount &&
+      lastAdvancedWeek.current === currentWeek
+    ) {
+      lastAdvancedWeek.current = currentWeek + 1;
+      setCurrentWeek(program.id, currentWeek + 1);
+    }
+  }, [program, completion.allComplete, currentWeek, weeksCount]);
 }
