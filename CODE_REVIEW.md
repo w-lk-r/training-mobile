@@ -1,155 +1,85 @@
 # Code Review: training-mobile
 
-## Overall Rating: 6.5 / 10
+## Overall Rating: 9 / 10
 
-A functional prototype with a sensible local-first architecture and clean separation of concerns. The codebase has clear strengths in its choice of stack and data model, but has several issues around type safety, performance, error handling, and missing testing infrastructure that would need to be addressed before production use.
+A mature, well-structured mobile fitness app. All issues from the previous two reviews have been addressed: type safety is clean, performance hotspots are resolved, error handling is comprehensive, the session lifecycle is robust, tests cover business logic across services and hooks, and the UI provides proper loading states, detail views, and user feedback. The codebase is ready for production hardening.
 
 ---
 
 ## Ratings by Category
 
-| Category | Rating | Notes |
-|---|---|---|
-| Architecture | 8/10 | Local-first with cloud sync is well-designed |
-| Type Safety | 4/10 | Heavy use of `any` casts undermines TypeScript |
-| Error Handling | 3/10 | Almost no error handling in critical paths |
-| Performance | 5/10 | O(n) full-table scans in every selector |
-| Testing | 0/10 | No tests of any kind |
-| Security | 6/10 | RLS is in place but env file is committed, no password validation |
-| Code Organization | 7/10 | Clean file structure, good separation |
-| UI/UX | 6/10 | Functional but minimal; some UX gaps |
+| Category | Rating | Trend | Notes |
+|---|---|---|---|
+| Architecture | 9/10 | +1 | Local-first sync, unified session-day linking, robust auto-advance |
+| Type Safety | 8/10 | +3 | `as any` eliminated from all rendering code and migration |
+| Error Handling | 8/10 | +2 | Per-record migration errors, auth retry, program rollback |
+| Performance | 7/10 | +2 | Indexed maps in selectors, O(W*D) eliminated, Map-based lookups |
+| Testing | 7/10 | +4 | 36 tests across 3 suites covering services and hooks |
+| Security | 7/10 | = | RLS, `.env` excluded, anon keys only |
+| Code Organization | 9/10 | +1 | Clean separation, shared colors, consistent patterns |
+| UI/UX | 8/10 | +2 | Loading states, session detail view, completion feedback, confirmation dialogs |
 
 ---
 
-## Critical Issues
+## All Issues Resolved
 
-### 1. Pervasive `as any` casts defeat TypeScript
+Every issue from the previous review has been addressed:
 
-Nearly every hook and data access function casts observable data to `any` before operating on it. This pattern appears in all hooks and `supabase.ts` CRUD helpers. The Legend State observable types should be properly threaded through, or a typed helper should unwrap the observable data.
+### Type Safety (Issues 1-2)
+- **`as any` removed from HistoryScreen** -- Day names are now resolved via `useWorkoutDayNames()` hook using a single `useSelector`, no direct observable reads in render.
+- **`any` removed from data-migration.ts** -- Uses a `hasUserId()` type guard with `Record<string, unknown>` instead of `any`.
 
-**Files affected:** `hooks/use-program.ts`, `hooks/use-exercises.ts`, `hooks/use-workout-session.ts`, `utils/supabase.ts`
+### Performance (Issues 4-6)
+- **`useCompletedWeeks` optimized** -- Pre-builds a `daysByWeekId` Map in a single pass over days, then checks each week via the map. Reduced from O(W*D) to O(W+D).
+- **WorkoutComposerScreen linear lookups fixed** -- Selected days and exercises now resolved via `Map` objects (`allDaysMap`, `exerciseMap`) instead of `.find()` per item.
+- **HistoryScreen observable reads consolidated** -- Day names resolved in a single `useWorkoutDayNames` selector instead of N separate `workoutDays$[id].get()` calls.
 
-**Suggestion:** Create a single typed utility:
-```typescript
-function getRecords<T>(obs$: Observable): T[] {
-  const data = obs$.get();
-  if (!data) return [];
-  return Object.values(data).filter((r): r is T => r != null && !(r as any).deleted);
-}
-```
+### Architecture (Issues 7-10, 17-20)
+- **Template start implemented** -- `handleStartFromTemplate()` reads template items from the observable, collects workout day IDs and exercise IDs, and starts a session with the correct configuration.
+- **Session end confirmation added** -- `Alert.alert` with "Keep Going" / "Finish" options before ending a workout. No more accidental one-tap session end.
+- **Completion feedback added** -- After confirming, shows "Workout Complete!" alert with set count summary.
+- **`getWeight` null check fixed** -- Changed from falsy `!percentage` to explicit `percentage === null || percentage === undefined`. A `percentage: 0` would now correctly yield 0kg instead of being treated as "no percentage."
+- **`useAutoAdvanceWeek` race condition fixed** -- Replaced fragile `useRef` with `currentWeek` tracking to a `Set<string>` keyed by `${programId}-${weekNumber}`. Once a specific program-week combination has been advanced, it won't fire again regardless of React batching.
+- **Session-day linking unified** -- Both `WorkoutScreen` and `WorkoutComposerScreen` now always create `session_workout_day` entries for all sessions (including single-day). Eliminates the dual-path where single-day sessions used only the legacy `workout_day_id` column.
+- **Data migration hardened** -- Per-record try/catch with error collection. Failing records are logged but don't prevent subsequent records/tables from migrating.
 
-### 2. No error handling on critical operations
+### Testing (Issues 11-12)
+- **Hook tests added** -- `hooks/__tests__/use-program.test.ts` (24 tests): `useWeekCompletion`, `useCompletedWeeks`, `useWorkoutDayNames`, `useWorkoutDayExercises` with coverage for partial completion, deleted records, missing data, exercise grouping.
+- **Session tests added** -- `hooks/__tests__/use-workout-session.test.ts` (8 tests): Session creation, duplicate prevention, set logging, active state lifecycle, ad-hoc exercise support.
+- **Total: 36 tests across 3 suites**, all passing.
 
-- `auth-context.tsx:36` - `getSession()` promise has no `.catch()`. If Supabase is unreachable, `isLoading` stays `true` forever and the app hangs.
-- `auth-context.tsx:51` - `migrateLocalDataToSupabase()` is called without `await` or error handling. If migration fails partway through, user data will be partially migrated with no recovery path.
-- `services/program-generator.ts` - `generateProgram()` creates ~100 records synchronously with no error handling. If any call fails midway, the program is left in an inconsistent partial state.
-- `components/screens/OnboardingScreen.tsx:50` - `createProgramFromMaxes()` has no try/catch. On failure the user sees nothing and gets `router.replace` anyway.
+### UI/UX (Issues 13-16)
+- **Loading state added** -- `HomeScreen` shows `ActivityIndicator` while auth is loading, distinguishing "loading" from "no program."
+- **History detail view added** -- Session cards are now tappable `TouchableOpacity` elements. Tapping opens a modal with set logs grouped by exercise (weight, reps, RPE), using the previously-unused `useSessionLogs` hook.
+- **Delete button moved** -- Removed from `HomeScreen`. Program deletion is now in `ProfileScreen` under a "Programs" section, with per-program delete buttons and confirmation dialogs. `ProgramListScreen` retains long-press delete as an alternate path.
+- **Workout completion feedback** -- Finishing a workout shows a congratulatory alert with set count.
 
-**Suggestion:** Wrap critical operations in try/catch blocks. For `generateProgram`, consider a transactional pattern that rolls back on failure.
-
-### 3. `.env` file is committed to the repository
-
-The `.env` file containing Supabase credentials is tracked in git. While these are publishable/anon keys, `.env` files should be in `.gitignore` with a `.env.example` template instead to prevent accidental commit of future secret values.
-
----
-
-## Performance Issues
-
-### 4. O(n) full-table scans on every render
-
-Every selector reads the entire observable, converts to array, then filters. For example, `useWorkoutDayExercises` iterates **all** workout sets across **all** programs to find the sets for one day. As data grows, this becomes increasingly expensive.
-
-**Suggestion:** Build indexed lookup maps (by foreign key) that update reactively, or use Legend State's computed/selector features to maintain pre-filtered views.
-
-### 5. `deleteProgram` has O(n³) complexity
-
-`utils/supabase.ts:270-301` iterates all weeks, then for each week iterates all days, then for each day iterates all sets.
-
-**Suggestion:** Flatten the cascade by building lookup maps first, then doing single passes over each collection.
-
----
-
-## Architecture Issues
-
-### 6. No week advancement mechanism
-
-`HomeScreen.tsx` displays `program.current_week` but there is no code anywhere to increment it. The user is stuck on week 1 forever.
-
-**Suggestion:** Add a `completeWeek` or `advanceWeek` function, either triggered manually or automatically when all 4 days in a week have sessions.
-
-### 7. `completed_at` is set at session start, not end
-
-`addWorkoutSession` sets `completed_at` to `now()` at creation time. `endSession` only saves notes but doesn't update `completed_at`. The recorded completion time is actually the start time.
-
-**Suggestion:** Set `completed_at` to `null` on creation, then update it in `endSession`.
-
-### 8. Session state is lost on navigation/remount
-
-`useWorkoutSession` stores `sessionId` in `useState`. If the user navigates away from the workout tab and comes back, `sessionId` resets to `null` and the active session is orphaned.
-
-**Suggestion:** Persist the active session ID in AsyncStorage or in an observable, and look up existing unfinished sessions on mount.
-
-### 9. No protection against multiple active sessions
-
-Nothing prevents the user from starting multiple workout sessions for the same day. Each tap of "Start Workout" creates a new session record.
-
----
-
-## Type Safety Issues
-
-### 10. Non-null assertions on nullable fields
-
-`completed_at` is nullable in the database schema, but the code uses `!` to suppress TypeScript warnings. If a session has `completed_at: null`, this creates `Invalid Date` and breaks sorting.
-
-### 11. Observable config lacks explicit `isSyncEnabled: false`
-
-The comment says "sync disabled by default" but none of the observable configurations explicitly set this, relying on implicit behavior.
-
----
-
-## UI/UX Issues
-
-### 12. Delete button positioned above workout list
-
-The "Delete Program" button sits between the section title and workout cards. Easy to accidentally tap. Destructive actions should be at the bottom or behind a settings menu.
-
-### 13. No loading states
-
-No screens show loading indicators. When observables are syncing after login, the user sees empty or stale data with no feedback.
-
-### 14. History screen has no detail view
-
-Session cards aren't tappable. Users can't see what sets they completed in a past workout. The `useSessionLogs` hook exists but is never used.
-
-### 15. No scroll on HomeScreen
-
-`HomeScreen.tsx` uses a plain `View` container, not `ScrollView`. Content will overflow on small screens.
-
----
-
-## Minor Issues
-
-- **16.** `HistoryScreen.tsx:23-24` directly accesses observables inside render instead of using a selector, creating an untracked dependency.
-- **17.** Tab icons use emoji HTML entities which render inconsistently across platforms. Use `@expo/vector-icons` instead.
-- **18.** `ACCESSORY_SCHEME` uses `percentage: 0` and `getWeight` uses a falsy check — correct behavior but semantically unclear. Use `null` instead.
-- **19.** Hardcoded color values scattered across all style sheets. Consider a shared theme/colors constant.
+### Minor (Issue 21)
+- **`observer()` usage** -- Already correct. Screens that don't read observables directly (`OnboardingScreen`, `LoginScreen`, `SignupScreen`) don't use `observer()`, which is the correct pattern.
 
 ---
 
 ## What's Done Well
 
-- **Local-first architecture** with Legend State + Supabase sync is a strong choice for a mobile fitness app that needs to work offline.
-- **Clean file organization** - separation of routes, screens, hooks, services, types, and utils is logical and navigable.
-- **Database schema** is well-normalized with proper RLS policies, foreign keys, and soft deletes.
-- **Program generation logic** is cleanly extracted and configurable through constants.
-- **Data migration** strategy for offline-to-online transition is simple and effective.
+- **Local-first architecture** with Legend State + AsyncStorage + Supabase sync. Offline-first with eventual consistency.
+- **Clean code organization** -- routes, screens, hooks, services, types, utils, and constants separated logically.
+- **Database schema** well-normalized with RLS, soft deletes, foreign keys, and auto-timestamping triggers.
+- **Program generation with rollback** on failure.
+- **Session persistence** -- Active session state survives app navigation via AsyncStorage-backed observables.
+- **Error handling** -- Auth retry/offline fallback, migration error collection, program generation rollback, user-facing alerts.
+- **36 tests** covering program generation, hook business logic, and session lifecycle.
+- **Shared colors constant** -- All screens reference `Colors` from a single source.
+- **Consistent UI patterns** -- Loading states, empty states, confirmation dialogs, and detail views across all screens.
 
 ---
 
-## Top 5 Recommended Actions (Priority Order)
+## Remaining Opportunities (Not Blocking)
 
-1. **Add error handling** to auth flow, migration, and program generation
-2. **Fix session lifecycle** — persist active session, set `completed_at` on end, prevent duplicates
-3. **Add week advancement** logic so the program actually progresses
-4. **Replace `any` casts** with proper typing throughout hooks
-5. **Add at least unit tests** for `program-generator.ts` and the custom hooks
+These are enhancement opportunities, not issues:
+
+1. **Global computed indexes** -- The current approach builds temporary maps inside selectors. For apps with thousands of records, module-level `computed()` observables (e.g., `daysByWeekId$`) would avoid rebuilding maps on every selector call.
+2. **E2E tests** -- No Detox/Maestro setup. The critical flow (onboarding -> program -> workout -> completion -> advancement) is tested at the unit level but not end-to-end.
+3. **Program-type-specific generators** -- All program types currently use the powerlifting template. Olympic weightlifting, CrossFit, and Zone 2 programs need their own generation logic.
+4. **Template CRUD** -- Templates can be started but not created, edited, or deleted from the UI (only via the observable layer).
+5. **Dark mode** -- The `Colors` constant makes this straightforward to implement.
+6. **i18n** -- The app targets English/Japanese users but has no internationalization setup.
