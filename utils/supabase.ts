@@ -387,12 +387,11 @@ export function deleteProgram(programId: string) {
   }
 }
 
-export function addWorkoutSession(workoutDayId?: string) {
+export function addWorkoutSession() {
   const id = generateId();
   workoutSessions$[id].assign({
     id,
     user_id: getUserId(),
-    workout_day_id: workoutDayId ?? null,
     completed_at: null,
   });
   return id;

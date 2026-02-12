@@ -17,7 +17,7 @@ export function useWorkoutSession() {
     const existing = activeSessionId$.get();
     if (existing) return existing;
 
-    const id = addWorkoutSession(dayIds[0]);
+    const id = addWorkoutSession();
     activeSessionId$.set(id);
     activeSessionDayIds$.set(dayIds);
     activeAdHocExerciseIds$.set(adHocExerciseIds ?? []);

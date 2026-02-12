@@ -10,6 +10,7 @@ const mockPrograms: Record<string, any> = {};
 const mockWeeks: Record<string, any> = {};
 const mockDays: Record<string, any> = {};
 const mockSessions: Record<string, any> = {};
+const mockSessionWorkoutDays: Record<string, any> = {};
 const mockSets: Record<string, any> = {};
 const mockExercises: Record<string, any> = {};
 
@@ -19,6 +20,7 @@ jest.mock("../../utils/supabase", () => ({
   programWeeks$: { get: jest.fn(() => mockWeeks) },
   workoutDays$: { get: jest.fn(() => mockDays) },
   workoutSessions$: { get: jest.fn(() => mockSessions) },
+  sessionWorkoutDays$: { get: jest.fn(() => mockSessionWorkoutDays) },
   workoutSets$: { get: jest.fn(() => mockSets) },
   exercises$: { get: jest.fn(() => mockExercises) },
   workoutTemplates$: { get: jest.fn(() => ({})) },
@@ -54,6 +56,7 @@ function clearAll() {
   for (const k of Object.keys(mockWeeks)) delete mockWeeks[k];
   for (const k of Object.keys(mockDays)) delete mockDays[k];
   for (const k of Object.keys(mockSessions)) delete mockSessions[k];
+  for (const k of Object.keys(mockSessionWorkoutDays)) delete mockSessionWorkoutDays[k];
   for (const k of Object.keys(mockSets)) delete mockSets[k];
   for (const k of Object.keys(mockExercises)) delete mockExercises[k];
 }
@@ -96,7 +99,10 @@ describe("useWeekCompletion", () => {
   it("tracks partial completion", () => {
     seedProgram();
     mockSessions["s-1"] = {
-      id: "s-1", workout_day_id: "day-1", completed_at: "2026-01-05", deleted: false,
+      id: "s-1", completed_at: "2026-01-05", deleted: false,
+    };
+    mockSessionWorkoutDays["swd-1"] = {
+      id: "swd-1", session_id: "s-1", workout_day_id: "day-1", deleted: false,
     };
 
     const result = useWeekCompletion("prog-1", 1);
@@ -108,10 +114,16 @@ describe("useWeekCompletion", () => {
   it("detects all-complete when every day has a session", () => {
     seedProgram();
     mockSessions["s-1"] = {
-      id: "s-1", workout_day_id: "day-1", completed_at: "2026-01-05", deleted: false,
+      id: "s-1", completed_at: "2026-01-05", deleted: false,
     };
     mockSessions["s-2"] = {
-      id: "s-2", workout_day_id: "day-2", completed_at: "2026-01-06", deleted: false,
+      id: "s-2", completed_at: "2026-01-06", deleted: false,
+    };
+    mockSessionWorkoutDays["swd-1"] = {
+      id: "swd-1", session_id: "s-1", workout_day_id: "day-1", deleted: false,
+    };
+    mockSessionWorkoutDays["swd-2"] = {
+      id: "swd-2", session_id: "s-2", workout_day_id: "day-2", deleted: false,
     };
 
     const result = useWeekCompletion("prog-1", 1);
@@ -122,7 +134,10 @@ describe("useWeekCompletion", () => {
   it("ignores deleted sessions", () => {
     seedProgram();
     mockSessions["s-1"] = {
-      id: "s-1", workout_day_id: "day-1", completed_at: "2026-01-05", deleted: true,
+      id: "s-1", completed_at: "2026-01-05", deleted: true,
+    };
+    mockSessionWorkoutDays["swd-1"] = {
+      id: "swd-1", session_id: "s-1", workout_day_id: "day-1", deleted: false,
     };
 
     const result = useWeekCompletion("prog-1", 1);
@@ -132,7 +147,10 @@ describe("useWeekCompletion", () => {
   it("ignores sessions without completed_at", () => {
     seedProgram();
     mockSessions["s-1"] = {
-      id: "s-1", workout_day_id: "day-1", completed_at: null, deleted: false,
+      id: "s-1", completed_at: null, deleted: false,
+    };
+    mockSessionWorkoutDays["swd-1"] = {
+      id: "swd-1", session_id: "s-1", workout_day_id: "day-1", deleted: false,
     };
 
     const result = useWeekCompletion("prog-1", 1);
@@ -152,10 +170,16 @@ describe("useCompletedWeeks", () => {
     seedProgram();
     // Complete week 1 (both days)
     mockSessions["s-1"] = {
-      id: "s-1", workout_day_id: "day-1", completed_at: "2026-01-05", deleted: false,
+      id: "s-1", completed_at: "2026-01-05", deleted: false,
     };
     mockSessions["s-2"] = {
-      id: "s-2", workout_day_id: "day-2", completed_at: "2026-01-06", deleted: false,
+      id: "s-2", completed_at: "2026-01-06", deleted: false,
+    };
+    mockSessionWorkoutDays["swd-1"] = {
+      id: "swd-1", session_id: "s-1", workout_day_id: "day-1", deleted: false,
+    };
+    mockSessionWorkoutDays["swd-2"] = {
+      id: "swd-2", session_id: "s-2", workout_day_id: "day-2", deleted: false,
     };
 
     const result = useCompletedWeeks("prog-1", 4);
@@ -166,7 +190,10 @@ describe("useCompletedWeeks", () => {
   it("does not mark partially completed weeks", () => {
     seedProgram();
     mockSessions["s-1"] = {
-      id: "s-1", workout_day_id: "day-1", completed_at: "2026-01-05", deleted: false,
+      id: "s-1", completed_at: "2026-01-05", deleted: false,
+    };
+    mockSessionWorkoutDays["swd-1"] = {
+      id: "swd-1", session_id: "s-1", workout_day_id: "day-1", deleted: false,
     };
 
     const result = useCompletedWeeks("prog-1", 4);

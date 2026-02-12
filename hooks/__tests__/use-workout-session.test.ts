@@ -16,12 +16,11 @@ jest.mock("../../utils/supabase", () => {
 
   return {
     __esModule: true,
-    addWorkoutSession: jest.fn((dayId?: string) => {
+    addWorkoutSession: jest.fn(() => {
       const id = `session-${++sessionIdCounter}`;
       sessions[id] = {
         id,
         user_id: "local",
-        workout_day_id: dayId ?? null,
         completed_at: null,
         notes: null,
         deleted: false,
