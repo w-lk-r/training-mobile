@@ -22,7 +22,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="workout"
         options={{
-          title: "Start",
+          title: "Workout",
           tabBarIcon: ({ color }) => (
             <Text style={{ color, fontSize: 20 }}>&#x1F4AA;</Text>
           ),

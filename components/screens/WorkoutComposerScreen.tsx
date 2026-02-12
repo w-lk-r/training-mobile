@@ -1,13 +1,22 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { observer } from "@legendapp/state/react";
-import { router } from "expo-router";
 import {
   useAllCurrentWorkoutDays,
   useWorkoutTemplates,
-  useTemplateItems,
 } from "../../hooks/use-program";
+import { useExercises } from "../../hooks/use-exercises";
+import { useWorkoutSession } from "../../hooks/use-workout-session";
+import { addExercise, addSessionWorkoutDay } from "../../utils/supabase";
 import type { Tables } from "../../utils/database.types";
 
 type WorkoutDayWithProgram = Tables<"workout_days"> & {
@@ -19,8 +28,16 @@ type WorkoutDayWithProgram = Tables<"workout_days"> & {
 const WorkoutComposerScreen = observer(() => {
   const allDays = useAllCurrentWorkoutDays();
   const templates = useWorkoutTemplates();
+  const exercises = useExercises();
+  const { startSession } = useWorkoutSession();
   const [selectedDayIds, setSelectedDayIds] = useState<string[]>([]);
+  const [adHocExerciseIds, setAdHocExerciseIds] = useState<string[]>([]);
   const [mode, setMode] = useState<"pick" | "reorder">("pick");
+  const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [showNewExerciseForm, setShowNewExerciseForm] = useState(false);
+  const [newExerciseName, setNewExerciseName] = useState("");
+  const [newExerciseCategory, setNewExerciseCategory] = useState("");
+  const [exerciseSearch, setExerciseSearch] = useState("");
 
   const toggleDay = (dayId: string) => {
     setSelectedDayIds((prev) =>
@@ -52,22 +69,64 @@ const WorkoutComposerScreen = observer(() => {
     .map((id) => allDays.find((d) => d.id === id))
     .filter(Boolean) as WorkoutDayWithProgram[];
 
+  const selectedAdHocExercises = adHocExerciseIds
+    .map((id) => exercises.find((e) => e.id === id))
+    .filter(Boolean) as Tables<"exercises">[];
+
   const handleStart = () => {
-    router.push({
-      pathname: "/active-workout",
-      params: { dayIds: selectedDayIds.join(",") },
-    });
+    const sessionId = startSession(
+      selectedDayIds.length > 0 ? selectedDayIds : ["adhoc"],
+      adHocExerciseIds,
+    );
+    // Link workout days to session
+    if (selectedDayIds.length > 1) {
+      selectedDayIds.forEach((dayId, index) => {
+        addSessionWorkoutDay(sessionId, dayId, index);
+      });
+    }
   };
 
   const handleStartFromTemplate = (templateId: string) => {
-    router.push({
-      pathname: "/active-workout",
-      params: { templateId },
-    });
+    // TODO: resolve template into day IDs and start
   };
 
+  const handlePickExercise = (exerciseId: string) => {
+    if (!adHocExerciseIds.includes(exerciseId)) {
+      setAdHocExerciseIds((prev) => [...prev, exerciseId]);
+    }
+    setShowExercisePicker(false);
+    setExerciseSearch("");
+  };
+
+  const handleCreateExercise = () => {
+    if (!newExerciseName.trim()) return;
+    const id = addExercise(
+      newExerciseName.trim(),
+      newExerciseCategory.trim() || "General",
+    );
+    setAdHocExerciseIds((prev) => [...prev, id]);
+    setNewExerciseName("");
+    setNewExerciseCategory("");
+    setShowNewExerciseForm(false);
+  };
+
+  const removeAdHocExercise = (exerciseId: string) => {
+    setAdHocExerciseIds((prev) => prev.filter((id) => id !== exerciseId));
+  };
+
+  const filteredExercises = exerciseSearch
+    ? exercises.filter((e) =>
+        e.name.toLowerCase().includes(exerciseSearch.toLowerCase()),
+      )
+    : exercises;
+
+  const hasSelection = selectedDayIds.length > 0 || adHocExerciseIds.length > 0;
+
   // Group days by program for the picker
-  const daysByProgram: Record<string, { programName: string; days: WorkoutDayWithProgram[] }> = {};
+  const daysByProgram: Record<
+    string,
+    { programName: string; days: WorkoutDayWithProgram[] }
+  > = {};
   for (const day of allDays) {
     if (!daysByProgram[day.programId]) {
       daysByProgram[day.programId] = { programName: day.programName, days: [] };
@@ -92,7 +151,10 @@ const WorkoutComposerScreen = observer(() => {
               </View>
               <View style={styles.reorderButtons}>
                 <TouchableOpacity
-                  style={[styles.arrowButton, index === 0 && styles.arrowDisabled]}
+                  style={[
+                    styles.arrowButton,
+                    index === 0 && styles.arrowDisabled,
+                  ]}
                   onPress={() => moveUp(index)}
                   disabled={index === 0}
                 >
@@ -133,8 +195,8 @@ const WorkoutComposerScreen = observer(() => {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.heading}>Start Workout</Text>
         <Text style={styles.subtitle}>
-          Select workout days from any of your programs to combine into one
-          session.
+          Select workout days from your programs, or add individual exercises
+          for a custom session.
         </Text>
 
         {templates.length > 0 && (
@@ -155,49 +217,94 @@ const WorkoutComposerScreen = observer(() => {
 
         <Text style={styles.sectionTitle}>Pick Workout Days</Text>
 
-        {Object.entries(daysByProgram).map(([progId, { programName, days }]) => (
-          <View key={progId} style={styles.programGroup}>
-            <Text style={styles.programLabel}>
-              {programName} (Week {days[0]?.weekNumber})
-            </Text>
-            {days.map((day) => {
-              const isSelected = selectedDayIds.includes(day.id);
-              return (
-                <TouchableOpacity
-                  key={day.id}
-                  style={[styles.dayRow, isSelected && styles.dayRowSelected]}
-                  onPress={() => toggleDay(day.id)}
-                >
-                  <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
-                    {isSelected && <Text style={styles.checkmark}>{"\u2713"}</Text>}
-                  </View>
-                  <Text style={styles.dayRowName}>{day.name}</Text>
-                  <Text style={styles.dayRowNumber}>Day {day.day_number}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ))}
+        {Object.entries(daysByProgram).map(
+          ([progId, { programName, days }]) => (
+            <View key={progId} style={styles.programGroup}>
+              <Text style={styles.programLabel}>
+                {programName} (Week {days[0]?.weekNumber})
+              </Text>
+              {days.map((day) => {
+                const isSelected = selectedDayIds.includes(day.id);
+                return (
+                  <TouchableOpacity
+                    key={day.id}
+                    style={[
+                      styles.dayRow,
+                      isSelected && styles.dayRowSelected,
+                    ]}
+                    onPress={() => toggleDay(day.id)}
+                  >
+                    <View
+                      style={[
+                        styles.checkbox,
+                        isSelected && styles.checkboxChecked,
+                      ]}
+                    >
+                      {isSelected && (
+                        <Text style={styles.checkmark}>{"\u2713"}</Text>
+                      )}
+                    </View>
+                    <Text style={styles.dayRowName}>{day.name}</Text>
+                    <Text style={styles.dayRowNumber}>
+                      Day {day.day_number}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ),
+        )}
 
-        {Object.keys(daysByProgram).length === 0 && (
+        {Object.keys(daysByProgram).length === 0 && adHocExerciseIds.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>
-              No programs yet. Create a program first.
+              No programs yet. Create a program or add exercises below.
             </Text>
-            <TouchableOpacity
-              style={styles.ctaButton}
-              onPress={() => router.push("/program-type")}
-            >
-              <Text style={styles.ctaButtonText}>Create Program</Text>
-            </TouchableOpacity>
           </View>
         )}
 
-        {selectedDayIds.length > 0 && (
+        {/* Ad-Hoc Exercises Section */}
+        <Text style={styles.sectionTitle}>Ad-Hoc Exercises</Text>
+        <Text style={styles.sectionSubtitle}>
+          Pick individual exercises outside of a program day.
+        </Text>
+
+        {selectedAdHocExercises.map((ex) => (
+          <View key={ex.id} style={styles.adHocRow}>
+            <View style={styles.adHocInfo}>
+              <Text style={styles.adHocName}>{ex.name}</Text>
+              <Text style={styles.adHocCategory}>{ex.category}</Text>
+            </View>
+            <TouchableOpacity onPress={() => removeAdHocExercise(ex.id)}>
+              <Text style={styles.removeText}>{"\u2715"}</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+
+        <View style={styles.adHocButtons}>
+          <TouchableOpacity
+            style={styles.adHocButton}
+            onPress={() => setShowExercisePicker(true)}
+          >
+            <Text style={styles.adHocButtonText}>Add from Library</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.adHocButton}
+            onPress={() => setShowNewExerciseForm(true)}
+          >
+            <Text style={styles.adHocButtonText}>Create New Exercise</Text>
+          </TouchableOpacity>
+        </View>
+
+        {hasSelection && (
           <View style={styles.bottomActions}>
             <Text style={styles.selectedCount}>
-              {selectedDayIds.length} day{selectedDayIds.length > 1 ? "s" : ""}{" "}
-              selected
+              {selectedDayIds.length > 0 &&
+                `${selectedDayIds.length} day${selectedDayIds.length > 1 ? "s" : ""}`}
+              {selectedDayIds.length > 0 && adHocExerciseIds.length > 0 && " + "}
+              {adHocExerciseIds.length > 0 &&
+                `${adHocExerciseIds.length} exercise${adHocExerciseIds.length > 1 ? "s" : ""}`}
+              {" selected"}
             </Text>
             <View style={styles.buttonRow}>
               {selectedDayIds.length > 1 && (
@@ -208,13 +315,114 @@ const WorkoutComposerScreen = observer(() => {
                   <Text style={styles.reorderButtonText}>Reorder</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={styles.startButton} onPress={handleStart}>
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={handleStart}
+              >
                 <Text style={styles.startButtonText}>Start Workout</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
       </ScrollView>
+
+      {/* Exercise Picker Modal */}
+      <Modal visible={showExercisePicker} animationType="slide">
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Pick Exercise</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setShowExercisePicker(false);
+                setExerciseSearch("");
+              }}
+            >
+              <Text style={styles.modalClose}>{"\u2715"}</Text>
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search exercises..."
+            value={exerciseSearch}
+            onChangeText={setExerciseSearch}
+            autoFocus
+          />
+          <ScrollView>
+            {filteredExercises.map((ex) => {
+              const alreadyAdded = adHocExerciseIds.includes(ex.id);
+              return (
+                <TouchableOpacity
+                  key={ex.id}
+                  style={[
+                    styles.exercisePickerRow,
+                    alreadyAdded && styles.exercisePickerRowDisabled,
+                  ]}
+                  onPress={() => handlePickExercise(ex.id)}
+                  disabled={alreadyAdded}
+                >
+                  <Text style={styles.exercisePickerName}>{ex.name}</Text>
+                  <Text style={styles.exercisePickerCategory}>
+                    {ex.category}
+                  </Text>
+                  {alreadyAdded && (
+                    <Text style={styles.exercisePickerAdded}>{"\u2713"}</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+            {filteredExercises.length === 0 && (
+              <Text style={styles.emptySearch}>No exercises found.</Text>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* New Exercise Form Modal */}
+      <Modal visible={showNewExerciseForm} animationType="slide">
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>New Exercise</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setShowNewExerciseForm(false);
+                setNewExerciseName("");
+                setNewExerciseCategory("");
+              }}
+            >
+              <Text style={styles.modalClose}>{"\u2715"}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.formContainer}>
+            <Text style={styles.formLabel}>Exercise Name</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. Barbell Row"
+              value={newExerciseName}
+              onChangeText={setNewExerciseName}
+              autoFocus
+            />
+            <Text style={styles.formLabel}>Category</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. Back (defaults to General)"
+              value={newExerciseCategory}
+              onChangeText={setNewExerciseCategory}
+            />
+            <TouchableOpacity
+              style={[
+                styles.startButton,
+                !newExerciseName.trim() && styles.buttonDisabled,
+              ]}
+              onPress={handleCreateExercise}
+              disabled={!newExerciseName.trim()}
+            >
+              <Text style={styles.startButtonText}>
+                Create & Add to Workout
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 });
@@ -244,8 +452,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    marginBottom: 12,
+    marginBottom: 8,
     marginTop: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: "#888",
+    marginBottom: 12,
   },
   templateCard: {
     flexDirection: "row",
@@ -314,23 +527,56 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: "center",
-    paddingTop: 40,
+    paddingTop: 20,
+    paddingBottom: 10,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#999",
-    marginBottom: 16,
+    textAlign: "center",
   },
-  ctaButton: {
-    backgroundColor: "#333",
+  // Ad-hoc exercise styles
+  adHocRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f8ff",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 6,
+  },
+  adHocInfo: {
+    flex: 1,
+  },
+  adHocName: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  adHocCategory: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 2,
+  },
+  removeText: {
+    fontSize: 18,
+    color: "#c00",
+    paddingHorizontal: 8,
+  },
+  adHocButtons: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 8,
+  },
+  adHocButton: {
+    flex: 1,
+    backgroundColor: "#f0f0f0",
     borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    padding: 14,
+    alignItems: "center",
   },
-  ctaButtonText: {
-    color: "#fff",
+  adHocButtonText: {
     fontSize: 14,
     fontWeight: "600",
+    color: "#333",
   },
   bottomActions: {
     marginTop: 24,
@@ -370,6 +616,9 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  buttonDisabled: {
+    opacity: 0.4,
   },
   // Reorder mode styles
   reorderCard: {
@@ -422,5 +671,80 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  modalClose: {
+    fontSize: 20,
+    color: "#666",
+    padding: 4,
+  },
+  searchInput: {
+    margin: 16,
+    padding: 12,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+    fontSize: 16,
+  },
+  exercisePickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  exercisePickerRowDisabled: {
+    opacity: 0.4,
+  },
+  exercisePickerName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  exercisePickerCategory: {
+    fontSize: 13,
+    color: "#888",
+    marginRight: 8,
+  },
+  exercisePickerAdded: {
+    fontSize: 16,
+    color: "#2a7",
+  },
+  emptySearch: {
+    textAlign: "center",
+    color: "#999",
+    padding: 24,
+    fontSize: 14,
+  },
+  formContainer: {
+    padding: 20,
+  },
+  formLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+    marginBottom: 6,
+    marginTop: 16,
+  },
+  formInput: {
+    padding: 12,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+    fontSize: 16,
   },
 });

@@ -1,6 +1,6 @@
 import { Observable, observable, syncState } from "@legendapp/state";
 import { observablePersistAsyncStorage } from "@legendapp/state/persist-plugins/async-storage";
-import { configureSynced } from "@legendapp/state/sync";
+import { configureSynced, synced } from "@legendapp/state/sync";
 import { syncedSupabase } from "@legendapp/state/sync-plugins/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
@@ -56,6 +56,33 @@ export const authUserId$ = observable<string>("local");
 function getUserId(): string {
   return authUserId$.get();
 }
+
+// ============================================================
+// Active Session State (persisted to AsyncStorage)
+// ============================================================
+
+const asyncStoragePlugin = observablePersistAsyncStorage({ AsyncStorage });
+
+export const activeSessionId$ = observable<string | null>(
+  synced({
+    initial: null,
+    persist: { name: "activeSessionId", plugin: asyncStoragePlugin },
+  }),
+);
+
+export const activeSessionDayIds$ = observable<string[]>(
+  synced({
+    initial: [] as string[],
+    persist: { name: "activeSessionDayIds", plugin: asyncStoragePlugin },
+  }),
+);
+
+export const activeAdHocExerciseIds$ = observable<string[]>(
+  synced({
+    initial: [] as string[],
+    persist: { name: "activeAdHocExerciseIds", plugin: asyncStoragePlugin },
+  }),
+);
 
 // ============================================================
 // Observables — one per table, sync disabled by default
@@ -357,7 +384,7 @@ export function addWorkoutSession(workoutDayId?: string) {
     id,
     user_id: getUserId(),
     workout_day_id: workoutDayId ?? null,
-    completed_at: new Date().toISOString(),
+    completed_at: null,
   });
   return id;
 }

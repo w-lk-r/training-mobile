@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,36 +9,41 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { observer } from "@legendapp/state/react";
-import { useLocalSearchParams, router } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import {
   useWorkoutDayExercises,
   useMultiDayExercises,
   type ExerciseGroup,
 } from "../../hooks/use-program";
-import { useMaxLifts } from "../../hooks/use-exercises";
+import { useExercises, useMaxLifts } from "../../hooks/use-exercises";
 import { useWorkoutSession } from "../../hooks/use-workout-session";
-import {
-  addWorkoutTemplate,
-  addTemplateItem,
-  addSessionWorkoutDay,
-} from "../../utils/supabase";
+import { addSessionWorkoutDay } from "../../utils/supabase";
 
-const WorkoutScreen = observer(() => {
-  const { dayId, dayName, dayIds, templateId } = useLocalSearchParams<{
+interface WorkoutScreenProps {
+  dayIds?: string[];
+  adHocExerciseIds?: string[];
+}
+
+const WorkoutScreen = observer((props: WorkoutScreenProps) => {
+  const params = useLocalSearchParams<{
     dayId?: string;
     dayName?: string;
     dayIds?: string;
     templateId?: string;
   }>();
 
-  // Support multiple day IDs (comma-separated) or single dayId
-  const workoutDayIds = dayIds
-    ? dayIds.split(",").filter(Boolean)
-    : dayId
-      ? [dayId]
-      : [];
+  // Support both props (from tab) and search params (from router push)
+  const workoutDayIds = props.dayIds
+    ? props.dayIds.filter((id) => id !== "adhoc")
+    : params.dayIds
+      ? params.dayIds.split(",").filter(Boolean)
+      : params.dayId
+        ? [params.dayId]
+        : [];
 
-  if (workoutDayIds.length === 0 && !templateId) {
+  const adHocExerciseIds = props.adHocExerciseIds ?? [];
+
+  if (workoutDayIds.length === 0 && adHocExerciseIds.length === 0 && !params.templateId) {
     return (
       <SafeAreaView style={styles.container} edges={["bottom"]}>
         <View style={styles.empty}>
@@ -55,28 +59,53 @@ const WorkoutScreen = observer(() => {
   return (
     <ActiveWorkout
       dayIds={workoutDayIds}
-      dayName={dayName ?? "Workout"}
+      dayName={params.dayName ?? "Workout"}
+      adHocExerciseIds={adHocExerciseIds}
     />
   );
 });
 
 const ActiveWorkout = observer(
-  ({ dayIds, dayName }: { dayIds: string[]; dayName: string }) => {
-    // Use multi-day hook when multiple days, single-day hook when one
+  ({
+    dayIds,
+    dayName,
+    adHocExerciseIds,
+  }: {
+    dayIds: string[];
+    dayName: string;
+    adHocExerciseIds: string[];
+  }) => {
     const exerciseGroups =
       dayIds.length === 1
         ? useWorkoutDayExercises(dayIds[0])
-        : useMultiDayExercises(dayIds);
+        : dayIds.length > 1
+          ? useMultiDayExercises(dayIds)
+          : [];
     const maxLifts = useMaxLifts();
-    const { sessionId, startSession, logSet, endSession } =
-      useWorkoutSession(dayIds[0]);
+    const { sessionId, startSession, logSet, endSession } = useWorkoutSession();
     const [completedSets, setCompletedSets] = useState<Set<string>>(new Set());
     const [setInputs, setSetInputs] = useState<
       Record<string, { weight: string; reps: string }>
     >({});
+    // Ad-hoc exercise set tracking (user adds sets manually)
+    const [adHocSets, setAdHocSets] = useState<
+      Record<string, { weight: string; reps: string }[]>
+    >({});
+    const [completedAdHocSets, setCompletedAdHocSets] = useState<Set<string>>(
+      new Set(),
+    );
+
+    // Get exercise details for ad-hoc exercises
+    const allExercises = useExercises();
+    const adHocExercises = adHocExerciseIds
+      .map((id) => allExercises.find((e) => e.id === id))
+      .filter(Boolean);
 
     const handleStartSession = () => {
-      const id = startSession();
+      const id = startSession(
+        dayIds.length > 0 ? dayIds : ["adhoc"],
+        adHocExerciseIds,
+      );
       // Link all workout days to this session
       if (dayIds.length > 1) {
         dayIds.forEach((dayId, index) => {
@@ -101,46 +130,48 @@ const ActiveWorkout = observer(
       setCompletedSets((prev) => new Set([...prev, setId]));
     };
 
-    const handleFinish = () => {
-      endSession();
+    const handleCompleteAdHocSet = (
+      exerciseId: string,
+      setIndex: number,
+    ) => {
+      const sets = adHocSets[exerciseId] ?? [];
+      const set = sets[setIndex];
+      if (!set) return;
 
-      // Offer to save as template if multiple days were combined
-      if (dayIds.length > 1) {
-        Alert.alert(
-          "Save as Template?",
-          "Save this workout combination and order as a template for quick access next time.",
-          [
-            { text: "Skip", style: "cancel", onPress: () => router.back() },
-            {
-              text: "Save",
-              onPress: () => promptSaveTemplate(),
-            },
-          ],
-        );
-      } else {
-        router.back();
-      }
+      const weight = set.weight ? parseFloat(set.weight) : 0;
+      const reps = set.reps ? parseInt(set.reps, 10) : 0;
+      if (weight === 0 && reps === 0) return;
+
+      logSet(exerciseId, weight, reps);
+      setCompletedAdHocSets(
+        (prev) => new Set([...prev, `${exerciseId}-${setIndex}`]),
+      );
     };
 
-    const promptSaveTemplate = () => {
-      Alert.prompt(
-        "Template Name",
-        "Give this workout template a name.",
-        [
-          { text: "Cancel", style: "cancel", onPress: () => router.back() },
-          {
-            text: "Save",
-            onPress: (name) => {
-              if (name && name.trim()) {
-                saveAsTemplate(name.trim(), exerciseGroups, dayIds);
-              }
-              router.back();
-            },
-          },
-        ],
-        "plain-text",
-        "",
-      );
+    const addAdHocSet = (exerciseId: string) => {
+      setAdHocSets((prev) => ({
+        ...prev,
+        [exerciseId]: [...(prev[exerciseId] ?? []), { weight: "", reps: "" }],
+      }));
+    };
+
+    const updateAdHocSetInput = (
+      exerciseId: string,
+      setIndex: number,
+      field: "weight" | "reps",
+      value: string,
+    ) => {
+      setAdHocSets((prev) => {
+        const sets = [...(prev[exerciseId] ?? [])];
+        sets[setIndex] = { ...sets[setIndex], [field]: value };
+        return { ...prev, [exerciseId]: sets };
+      });
+    };
+
+    const handleFinish = () => {
+      endSession();
+      // No router.back() — the workout tab auto-switches to composer view
+      // when activeSessionId$ is cleared
     };
 
     const getWeight = (exerciseId: string, percentage: number | null) => {
@@ -150,8 +181,13 @@ const ActiveWorkout = observer(
       return Math.round(max * percentage * 2) / 2;
     };
 
+    const hasAdHoc = adHocExercises.length > 0;
     const title =
-      dayIds.length > 1 ? `Combined Workout (${dayIds.length} days)` : dayName;
+      dayIds.length > 1
+        ? `Combined Workout (${dayIds.length} days)`
+        : dayIds.length === 0 && hasAdHoc
+          ? "Ad-Hoc Workout"
+          : dayName;
 
     return (
       <SafeAreaView style={styles.container} edges={["bottom"]}>
@@ -167,6 +203,7 @@ const ActiveWorkout = observer(
             </TouchableOpacity>
           ) : (
             <>
+              {/* Program exercise groups */}
               {exerciseGroups.map((group) => (
                 <ExerciseGroupCard
                   key={group.exerciseId}
@@ -185,6 +222,94 @@ const ActiveWorkout = observer(
                 />
               ))}
 
+              {/* Ad-hoc exercises */}
+              {adHocExercises.map((ex) => {
+                if (!ex) return null;
+                const sets = adHocSets[ex.id] ?? [];
+                return (
+                  <View key={ex.id} style={styles.exerciseCard}>
+                    <Text style={styles.exerciseName}>{ex.name}</Text>
+                    <Text style={styles.adHocLabel}>Ad-hoc exercise</Text>
+                    {maxLifts[ex.id] && (
+                      <Text style={styles.maxText}>
+                        1RM: {maxLifts[ex.id]}kg
+                      </Text>
+                    )}
+
+                    <View style={styles.setHeader}>
+                      <Text style={[styles.setHeaderText, styles.setCol]}>
+                        Set
+                      </Text>
+                      <Text style={[styles.setHeaderText, styles.weightCol]}>
+                        Weight
+                      </Text>
+                      <Text style={[styles.setHeaderText, styles.repsCol]}>
+                        Reps
+                      </Text>
+                      <View style={styles.actionCol} />
+                    </View>
+
+                    {sets.map((set, idx) => {
+                      const key = `${ex.id}-${idx}`;
+                      const isDone = completedAdHocSets.has(key);
+                      return (
+                        <View
+                          key={key}
+                          style={[styles.setRow, isDone && styles.setRowDone]}
+                        >
+                          <Text style={[styles.setText, styles.setCol]}>
+                            {idx + 1}
+                          </Text>
+                          <TextInput
+                            style={[styles.setInput, styles.weightCol]}
+                            value={set.weight}
+                            onChangeText={(v) =>
+                              updateAdHocSetInput(ex.id, idx, "weight", v)
+                            }
+                            placeholder={"0"}
+                            keyboardType="decimal-pad"
+                            editable={!isDone}
+                          />
+                          <TextInput
+                            style={[styles.setInput, styles.repsCol]}
+                            value={set.reps}
+                            onChangeText={(v) =>
+                              updateAdHocSetInput(ex.id, idx, "reps", v)
+                            }
+                            placeholder={"0"}
+                            keyboardType="number-pad"
+                            editable={!isDone}
+                          />
+                          <View style={styles.actionCol}>
+                            {!isDone ? (
+                              <TouchableOpacity
+                                style={styles.checkButton}
+                                onPress={() =>
+                                  handleCompleteAdHocSet(ex.id, idx)
+                                }
+                              >
+                                <Text style={styles.checkText}>
+                                  {"\u2713"}
+                                </Text>
+                              </TouchableOpacity>
+                            ) : (
+                              <Text style={styles.doneCheck}>{"\u2705"}</Text>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
+
+                    <TouchableOpacity
+                      style={styles.addSetButton}
+                      onPress={() => addAdHocSet(ex.id)}
+                    >
+                      <Text style={styles.addSetText}>+ Add Set</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+
               <TouchableOpacity
                 style={styles.finishButton}
                 onPress={handleFinish}
@@ -199,32 +324,6 @@ const ActiveWorkout = observer(
   },
 );
 
-function saveAsTemplate(
-  name: string,
-  exerciseGroups: ExerciseGroup[],
-  dayIds: string[],
-) {
-  const templateId = addWorkoutTemplate(name);
-  let sortOrder = 0;
-
-  exerciseGroups.forEach((group) => {
-    group.sets.forEach((set) => {
-      addTemplateItem(
-        templateId,
-        group.exerciseId,
-        sortOrder,
-        set.reps,
-        set.percentage_of_max,
-        set.rpe,
-        set.workout_day_id,
-      );
-      sortOrder++;
-    });
-  });
-
-  return templateId;
-}
-
 function ExerciseGroupCard({
   group,
   maxLifts,
@@ -238,7 +337,11 @@ function ExerciseGroupCard({
   maxLifts: Record<string, number>;
   completedSets: Set<string>;
   setInputs: Record<string, { weight: string; reps: string }>;
-  onSetInputChange: (setId: string, field: "weight" | "reps", value: string) => void;
+  onSetInputChange: (
+    setId: string,
+    field: "weight" | "reps",
+    value: string,
+  ) => void;
   onCompleteSet: (
     setId: string,
     exerciseId: string,
@@ -367,6 +470,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 4,
   },
+  adHocLabel: {
+    fontSize: 12,
+    color: "#4a90d9",
+    marginBottom: 8,
+  },
   maxText: {
     fontSize: 13,
     color: "#666",
@@ -435,6 +543,18 @@ const styles = StyleSheet.create({
   },
   doneCheck: {
     fontSize: 20,
+  },
+  addSetButton: {
+    marginTop: 8,
+    padding: 10,
+    alignItems: "center",
+    backgroundColor: "#eee",
+    borderRadius: 6,
+  },
+  addSetText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#555",
   },
   finishButton: {
     backgroundColor: "#2a7",

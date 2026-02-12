@@ -1,19 +1,27 @@
-import { useState } from "react";
 import { useSelector } from "@legendapp/state/react";
 import {
   addWorkoutSession,
   addSetLog,
   workoutSessions$,
   setLogs$,
+  activeSessionId$,
+  activeSessionDayIds$,
+  activeAdHocExerciseIds$,
 } from "../utils/supabase";
 import type { Tables } from "../utils/database.types";
 
-export function useWorkoutSession(workoutDayId: string) {
-  const [sessionId, setSessionId] = useState<string | null>(null);
+export function useWorkoutSession() {
+  const sessionId = useSelector(() => activeSessionId$.get());
 
-  const startSession = () => {
-    const id = addWorkoutSession(workoutDayId);
-    setSessionId(id);
+  const startSession = (dayIds: string[], adHocExerciseIds?: string[]) => {
+    // Prevent duplicates — return existing if active
+    const existing = activeSessionId$.get();
+    if (existing) return existing;
+
+    const id = addWorkoutSession(dayIds[0]);
+    activeSessionId$.set(id);
+    activeSessionDayIds$.set(dayIds);
+    activeAdHocExerciseIds$.set(adHocExerciseIds ?? []);
     return id;
   };
 
@@ -24,18 +32,35 @@ export function useWorkoutSession(workoutDayId: string) {
     workoutSetId?: string,
     rpe?: number,
   ) => {
-    if (!sessionId) return;
-    addSetLog(sessionId, exerciseId, weightKg, repsCompleted, workoutSetId, rpe);
+    const sid = activeSessionId$.get();
+    if (!sid) return;
+    addSetLog(sid, exerciseId, weightKg, repsCompleted, workoutSetId, rpe);
   };
 
   const endSession = (notes?: string) => {
-    if (sessionId && notes) {
-      workoutSessions$[sessionId].notes.set(notes);
+    const sid = activeSessionId$.get();
+    if (sid) {
+      workoutSessions$[sid].completed_at.set(new Date().toISOString());
+      if (notes) {
+        workoutSessions$[sid].notes.set(notes);
+      }
     }
-    setSessionId(null);
+    activeSessionId$.set(null);
+    activeSessionDayIds$.set([]);
+    activeAdHocExerciseIds$.set([]);
   };
 
   return { sessionId, startSession, logSet, endSession };
+}
+
+/** Hook to read persisted day IDs for the active session */
+export function useActiveSessionDayIds(): string[] {
+  return useSelector(() => activeSessionDayIds$.get()) ?? [];
+}
+
+/** Hook to read persisted ad-hoc exercise IDs for the active session */
+export function useActiveAdHocExerciseIds(): string[] {
+  return useSelector(() => activeAdHocExerciseIds$.get()) ?? [];
 }
 
 /** Returns completed sessions, most recent first */
@@ -46,7 +71,9 @@ export function useWorkoutHistory() {
 
     return (
       Object.values(data)
-        .filter((s: any) => s && !s.deleted) as Tables<"workout_sessions">[]
+        .filter(
+          (s: any) => s && !s.deleted && s.completed_at != null,
+        ) as Tables<"workout_sessions">[]
     ).sort(
       (a, b) =>
         new Date(b.completed_at!).getTime() -
